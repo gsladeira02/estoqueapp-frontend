@@ -12,7 +12,7 @@ export default function ProdutosPage() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState({ sku: '', nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '' })
+  const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '' })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
@@ -34,14 +34,14 @@ export default function ProdutosPage() {
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ sku: '', nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '' })
+    setForm({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '' })
     setErro('')
     setModal(true)
   }
 
   function abrirEditar(p) {
     setEditando(p)
-    setForm({ sku: p.sku, nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo })
+    setForm({ nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo })
     setErro('')
     setModal(true)
   }
@@ -53,7 +53,8 @@ export default function ProdutosPage() {
       if (editando) {
         await api.put(`/produtos/${editando.id}`, form)
       } else {
-        await api.post('/produtos', { ...form, estoque_minimo: Number(form.estoque_minimo) || 0 })
+        const sku = 'P' + Date.now().toString().slice(-6)
+        await api.post('/produtos', { ...form, sku, estoque_minimo: Number(form.estoque_minimo) || 0 })
       }
       setModal(false)
       carregar()
@@ -71,7 +72,7 @@ export default function ProdutosPage() {
       </div>
 
       <div style={{ marginBottom: '1rem' }}>
-        <input className="input" placeholder="Buscar por nome ou SKU..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 360 }} />
+        <input className="input" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 360 }} />
       </div>
 
       <div className="card">
@@ -82,11 +83,10 @@ export default function ProdutosPage() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>SKU</th><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Unidade</th><th>Min.</th><th></th></tr></thead>
+              <thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Unidade</th><th>Min.</th><th></th></tr></thead>
               <tbody>
                 {produtos.map(p => (
                   <tr key={p.id}>
-                    <td><span className="font-mono text-sm">{p.sku}</span></td>
                     <td style={{ fontWeight: 500 }}>{p.nome}</td>
                     <td className="text-sm text-muted">{p.categorias?.nome}</td>
                     <td><span className={`badge ${TIPO_BADGE[p.tipo]}`}>{TIPO_LABEL[p.tipo]}</span></td>
@@ -109,25 +109,6 @@ export default function ProdutosPage() {
               <button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button>
             </div>
             <div className="modal-body">
-              <div className="grid-2">
-                <div className="field">
-                  <label className="label">SKU *</label>
-                  <input className="input" placeholder="PROD-001" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))} />
-                </div>
-                <div className="field">
-                  <label className="label">Unidade *</label>
-                  <select className="select" value={form.unidade} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))}>
-                    <option value="un">un</option>
-                    <option value="kg">kg</option>
-                    <option value="g">g</option>
-                    <option value="L">L</option>
-                    <option value="ml">ml</option>
-                    <option value="m">m</option>
-                    <option value="cx">cx</option>
-                    <option value="pc">pc</option>
-                  </select>
-                </div>
-              </div>
               <div className="field">
                 <label className="label">Nome *</label>
                 <input className="input" placeholder="Nome do produto" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
@@ -149,9 +130,24 @@ export default function ProdutosPage() {
                   </select>
                 </div>
               </div>
-              <div className="field">
-                <label className="label">Estoque minimo</label>
-                <input className="input" type="number" min="0" step="0.001" placeholder="0" value={form.estoque_minimo} onChange={e => setForm(f => ({ ...f, estoque_minimo: e.target.value }))} />
+              <div className="grid-2">
+                <div className="field">
+                  <label className="label">Unidade *</label>
+                  <select className="select" value={form.unidade} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))}>
+                    <option value="un">un</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="L">L</option>
+                    <option value="ml">ml</option>
+                    <option value="m">m</option>
+                    <option value="cx">cx</option>
+                    <option value="pc">pc</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="label">Estoque minimo</label>
+                  <input className="input" type="number" min="0" step="0.001" placeholder="0" value={form.estoque_minimo} onChange={e => setForm(f => ({ ...f, estoque_minimo: e.target.value }))} />
+                </div>
               </div>
               <div className="field">
                 <label className="label">Descricao</label>
@@ -161,7 +157,7 @@ export default function ProdutosPage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={salvar} disabled={salvando || !form.sku || !form.nome || !form.categoria_id}>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvando || !form.nome || !form.categoria_id}>
                 {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Salvar'}
               </button>
             </div>
