@@ -14,6 +14,7 @@ export default function Sidebar({ open, onClose }) {
     { href: '/movimentacoes', label: 'Movimentacoes' },
     { href: '/transferencias', label: 'Transferencias' },
     { href: '/produtos', label: 'Produtos' },
+    { href: '/relatorios', label: 'Relatorios' },
   ]
 
   const adminItems = [
