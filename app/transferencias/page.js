@@ -17,7 +17,7 @@ export default function TransferenciasPage() {
   const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
-  const [filtroStatus, setFiltroStatus] = useState('pendente')
+  const [filtroStatus, setFiltroStatus] = useState('')
   const admin = isAdmin()
 
   async function carregar() {
@@ -64,6 +64,133 @@ export default function TransferenciasPage() {
     try { await api.patch(`/transferencias/${id}/cancelar`, {}); carregar() } catch (e) { alert(e.message) }
   }
 
+  function imprimirRomaneio(t) {
+    const janela = window.open('', '_blank')
+    janela.document.write(`
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8"/>
+        <title>Romaneio de Transferencia</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body { font-family: Arial, sans-serif; font-size: 13px; color: #000; padding: 30px; }
+          h1 { font-size: 20px; text-align: center; margin-bottom: 4px; }
+          .subtitulo { text-align: center; font-size: 12px; color: #555; margin-bottom: 24px; }
+          .secao { border: 1px solid #ccc; border-radius: 6px; padding: 14px; margin-bottom: 16px; }
+          .secao-titulo { font-weight: bold; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 6px; }
+          .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+          .campo { display: flex; flex-direction: column; gap: 3px; }
+          .campo-label { font-size: 10px; color: #777; text-transform: uppercase; letter-spacing: .05em; }
+          .campo-valor { font-size: 14px; font-weight: 600; }
+          .destaque { font-size: 22px; font-weight: 700; }
+          .assinaturas { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 8px; }
+          .assinatura { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+          .linha-assinatura { width: 100%; border-bottom: 1px solid #000; margin-top: 40px; }
+          .assinatura-label { font-size: 11px; color: #555; }
+          .rodape { text-align: center; font-size: 10px; color: #aaa; margin-top: 20px; }
+          @media print {
+            body { padding: 15px; }
+            button { display: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <h1>Romaneio de Transferencia</h1>
+        <p class="subtitulo">Documento de controle de movimentacao entre estoques</p>
+
+        <div class="secao">
+          <div class="secao-titulo">Informacoes da Transferencia</div>
+          <div class="grid">
+            <div class="campo">
+              <span class="campo-label">Data de solicitacao</span>
+              <span class="campo-valor">${new Date(t.solicitado_em).toLocaleString('pt-BR')}</span>
+            </div>
+            <div class="campo">
+              <span class="campo-label">Status</span>
+              <span class="campo-valor">${STATUS_LABEL[t.status]}</span>
+            </div>
+            ${t.resolvido_em ? `
+            <div class="campo">
+              <span class="campo-label">Data de aprovacao</span>
+              <span class="campo-valor">${new Date(t.resolvido_em).toLocaleString('pt-BR')}</span>
+            </div>` : ''}
+            <div class="campo">
+              <span class="campo-label">Solicitante</span>
+              <span class="campo-valor">${t.solicitante?.nome || '-'}</span>
+            </div>
+            ${t.admin ? `
+            <div class="campo">
+              <span class="campo-label">Aprovado por</span>
+              <span class="campo-valor">${t.admin?.nome}</span>
+            </div>` : ''}
+          </div>
+        </div>
+
+        <div class="secao">
+          <div class="secao-titulo">Produto</div>
+          <div class="grid">
+            <div class="campo">
+              <span class="campo-label">Nome do produto</span>
+              <span class="campo-valor destaque">${t.produtos?.nome}</span>
+            </div>
+            <div class="campo">
+              <span class="campo-label">Quantidade</span>
+              <span class="campo-valor destaque">${t.quantidade} ${t.produtos?.unidade}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="secao">
+          <div class="secao-titulo">Origem e Destino</div>
+          <div class="grid">
+            <div class="campo">
+              <span class="campo-label">Estoque de origem</span>
+              <span class="campo-valor">${t.centro_origem?.estoques?.nome}</span>
+              <span class="campo-label" style="margin-top:4px">Centro</span>
+              <span class="campo-valor">${t.centro_origem?.nome}</span>
+            </div>
+            <div class="campo">
+              <span class="campo-label">Estoque de destino</span>
+              <span class="campo-valor">${t.centro_destino?.estoques?.nome}</span>
+              <span class="campo-label" style="margin-top:4px">Centro</span>
+              <span class="campo-valor">${t.centro_destino?.nome}</span>
+            </div>
+          </div>
+          ${t.observacao ? `
+          <div class="campo" style="margin-top:12px">
+            <span class="campo-label">Observacao</span>
+            <span class="campo-valor">${t.observacao}</span>
+          </div>` : ''}
+        </div>
+
+        <div class="secao">
+          <div class="secao-titulo">Assinaturas</div>
+          <div class="assinaturas">
+            <div class="assinatura">
+              <div class="linha-assinatura"></div>
+              <span class="assinatura-label">Remetente</span>
+            </div>
+            <div class="assinatura">
+              <div class="linha-assinatura"></div>
+              <span class="assinatura-label">Motorista</span>
+            </div>
+            <div class="assinatura">
+              <div class="linha-assinatura"></div>
+              <span class="assinatura-label">Destinatario</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="rodape">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
+
+        <script>window.onload = function() { window.print() }</script>
+      </body>
+      </html>
+    `)
+    janela.document.close()
+  }
+
   return (
     <AppLayout title="Transferencias">
       <div className="flex items-center justify-between mb-4">
@@ -102,6 +229,7 @@ export default function TransferenciasPage() {
                     <td className="text-xs text-muted">{new Date(t.solicitado_em).toLocaleDateString('pt-BR')}</td>
                     <td>
                       <div className="flex gap-2">
+                        <button className="btn btn-ghost btn-sm" onClick={() => imprimirRomaneio(t)}>Romaneio</button>
                         {admin && t.status === 'pendente' && (
                           <button className="btn btn-sm btn-primary" onClick={() => { setModalAprovar(t); setMotivoRejeicao('') }}>Revisar</button>
                         )}
@@ -130,7 +258,7 @@ export default function TransferenciasPage() {
                 <label className="label">Produto</label>
                 <select className="select" value={form.produto_id} onChange={e => setForm(f => ({ ...f, produto_id: e.target.value }))}>
                   <option value="">Selecione...</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.sku})</option>)}
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="field">
