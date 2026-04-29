@@ -132,10 +132,6 @@ export default function EstoquesPage() {
                 <label className="label">Nome do centro *</label>
                 <input className="input" placeholder="Ex: Prateleira A..." value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
               </div>
-              <div className="field">
-                <label className="label">Localizacao</label>
-                <input className="input" placeholder="Ex: Corredor 3..." value={form.localizacao} onChange={e => setForm(f => ({ ...f, localizacao: e.target.value }))} />
-              </div>
               {erro && <div className="alert alert-red text-sm">{erro}</div>}
             </div>
             <div className="modal-footer">
