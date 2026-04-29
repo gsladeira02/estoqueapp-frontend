@@ -49,6 +49,26 @@ export default function ProdutosPage() {
     setModal(true)
   }
 
+  async function apagar(id) {
+    if (!confirm('Tem certeza que deseja apagar este produto?')) return
+    try {
+      await api.put(`/produtos/${id}`, { ativo: false })
+      carregar()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
+  async function apagarCategoria(id) {
+    if (!confirm('Tem certeza que deseja apagar esta categoria?')) return
+    try {
+      await api.put(`/categorias/${id}`, { ativo: false })
+      carregar()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   async function salvar() {
     setErro('')
     setSalvando(true)
@@ -117,7 +137,14 @@ export default function ProdutosPage() {
                         <td><span className={`badge ${TIPO_BADGE[p.tipo]}`}>{TIPO_LABEL[p.tipo]}</span></td>
                         <td className="text-sm">{p.unidade}</td>
                         <td className="text-sm">{p.estoque_minimo}</td>
-                        <td>{admin && <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(p)}>Editar</button>}</td>
+                        <td>
+                          {admin && (
+                            <div className="flex gap-2">
+                              <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(p)}>Editar</button>
+                              <button className="btn btn-danger btn-sm" onClick={() => apagar(p.id)}>Apagar</button>
+                            </div>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -137,12 +164,17 @@ export default function ProdutosPage() {
           ) : (
             <div className="table-wrap">
               <table>
-                <thead><tr><th>Nome</th><th>Descricao</th></tr></thead>
+                <thead><tr><th>Nome</th><th>Descricao</th><th></th></tr></thead>
                 <tbody>
                   {categorias.map(c => (
                     <tr key={c.id}>
                       <td style={{ fontWeight: 500 }}>{c.nome}</td>
                       <td className="text-sm text-muted">{c.descricao || '-'}</td>
+                      <td>
+                        {admin && (
+                          <button className="btn btn-danger btn-sm" onClick={() => apagarCategoria(c.id)}>Apagar</button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
