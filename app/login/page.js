@@ -49,11 +49,7 @@ export default function LoginPage() {
               <label className="label">Senha</label>
               <input className="input" type="password" placeholder="••••••••" value={senha} onChange={e => setSenha(e.target.value)} required autoComplete="current-password" />
             </div>
-            {erro && (
-              <div className="alert alert-red" style={{ fontSize: '.8rem' }}>
-                {erro}
-              </div>
-            )}
+            {erro && <div className="alert alert-red" style={{ fontSize: '.8rem' }}>{erro}</div>}
             <button className="btn btn-primary w-full" type="submit" disabled={loading} style={{ justifyContent: 'center', marginTop: '.25rem', padding: '.7rem' }}>
               {loading ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Entrar'}
             </button>
