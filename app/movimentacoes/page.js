@@ -21,8 +21,8 @@ export default function MovimentacoesPage() {
   async function carregar() {
     setLoading(true)
     try {
-      const params = filtroTipo ? `?tipo=${filtroTipo}` : ''
-      const data = await api.get(`/movimentacoes${params}`)
+      const params = filtroTipo ? '?tipo=' + filtroTipo : ''
+      const data = await api.get('/movimentacoes' + params)
       setMovs(data.dados || [])
     } finally { setLoading(false) }
   }
@@ -64,7 +64,7 @@ export default function MovimentacoesPage() {
 
       <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
         {['', 'entrada', 'saida', 'ajuste'].map(t => (
-          <button key={t} className={`btn btn-sm ${filtroTipo === t ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltroTipo(t)}>
+          <button key={t} className={'btn btn-sm ' + (filtroTipo === t ? 'btn-primary' : 'btn-secondary')} onClick={() => setFiltroTipo(t)}>
             {t === '' ? 'Todos' : TIPOS[t]}
           </button>
         ))}
@@ -78,13 +78,15 @@ export default function MovimentacoesPage() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Qtd</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr></thead>
+              <thead>
+                <tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Qtd</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr>
+              </thead>
               <tbody>
                 {movs.map(m => (
                   <tr key={m.id}>
                     <td><div style={{ fontWeight: 500 }}>{m.produtos?.nome}</div><div className="text-xs text-muted">{m.produtos?.sku}</div></td>
                     <td><div>{m.centros?.nome}</div><div className="text-xs text-muted">{m.centros?.estoques?.nome}</div></td>
-                    <td><span className={`badge ${BADGE[m.tipo]}`}>{TIPOS[m.tipo]}</span></td>
+                    <td><span className={'badge ' + BADGE[m.tipo]}>{TIPOS[m.tipo]}</span></td>
                     <td style={{ fontWeight: 600 }}>{m.quantidade} {m.produtos?.unidade}</td>
                     <td className="text-sm text-muted">{m.motivo || '-'}</td>
                     <td className="text-sm">{m.usuarios?.nome}</td>
@@ -115,4 +117,43 @@ export default function MovimentacoesPage() {
               </div>
               <div className="field">
                 <label className="label">Produto</label>
-                <select className="select" value={form.produto_id}
+                <select className="select" value={form.produto_id} onChange={e => setForm(f => ({ ...f, produto_id: e.target.value }))}>
+                  <option value="">Selecione...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.sku})</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Centro de estoque</label>
+                <select className="select" value={form.centro_id} onChange={e => setForm(f => ({ ...f, centro_id: e.target.value }))}>
+                  <option value="">Selecione...</option>
+                  {centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Quantidade</label>
+                <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label className="label">Motivo</label>
+                  <input className="input" placeholder="Compra, venda..." value={form.motivo} onChange={e => setForm(f => ({ ...f, motivo: e.target.value }))} />
+                </div>
+                <div className="field">
+                  <label className="label">Documento / NF</label>
+                  <input className="input" placeholder="NF-001..." value={form.documento} onChange={e => setForm(f => ({ ...f, documento: e.target.value }))} />
+                </div>
+              </div>
+              {erro && <div className="alert alert-red text-sm">{erro}</div>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvando || !form.produto_id || !form.centro_id || !form.quantidade}>
+                {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Registrar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  )
+}
