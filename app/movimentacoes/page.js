@@ -12,7 +12,7 @@ export default function MovimentacoesPage() {
   const [modal, setModal] = useState(false)
   const [produtos, setProdutos] = useState([])
   const [centros, setCentros] = useState([])
-  const [form, setForm] = useState({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '' })
+  const [form, setForm] = useState({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '' })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
@@ -33,7 +33,7 @@ export default function MovimentacoesPage() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
     setProdutos(p)
     setCentros(c)
-    setForm({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '' })
+    setForm({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '' })
     setErro('')
     setModal(true)
   }
@@ -42,13 +42,19 @@ export default function MovimentacoesPage() {
     setErro('')
     setSalvando(true)
     try {
-      const res = await api.post('/movimentacoes', { ...form, quantidade: Number(form.quantidade) })
+      const res = await api.post('/movimentacoes', {
+        ...form,
+        quantidade: Number(form.quantidade),
+        custo_unitario: Number(form.custo_unitario) || 0
+      })
       setSucesso('Movimentacao registrada! Saldo atual: ' + res.saldo_atual)
       setModal(false)
       carregar()
       setTimeout(() => setSucesso(''), 4000)
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
+
+  const custoTotal = Number(form.quantidade || 0) * Number(form.custo_unitario || 0)
 
   return (
     <AppLayout title="Movimentacoes">
@@ -79,15 +85,21 @@ export default function MovimentacoesPage() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Qtd</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr>
+                <tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Qtd</th><th>Custo Unit.</th><th>Custo Total</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr>
               </thead>
               <tbody>
                 {movs.map(m => (
                   <tr key={m.id}>
-                    <td><div style={{ fontWeight: 500 }}>{m.produtos?.nome}</div><div className="text-xs text-muted">{m.produtos?.sku}</div></td>
+                    <td><div style={{ fontWeight: 500 }}>{m.produtos?.nome}</div></td>
                     <td><div>{m.centros?.nome}</div><div className="text-xs text-muted">{m.centros?.estoques?.nome}</div></td>
                     <td><span className={'badge ' + BADGE[m.tipo]}>{TIPOS[m.tipo]}</span></td>
                     <td style={{ fontWeight: 600 }}>{m.quantidade} {m.produtos?.unidade}</td>
+                    <td className="text-sm">
+                      {m.custo_unitario ? `R$ ${Number(m.custo_unitario).toFixed(2).replace('.', ',')}` : '-'}
+                    </td>
+                    <td className="text-sm font-semibold">
+                      {m.custo_total ? `R$ ${Number(m.custo_total).toFixed(2).replace('.', ',')}` : '-'}
+                    </td>
                     <td className="text-sm text-muted">{m.motivo || '-'}</td>
                     <td className="text-sm">{m.usuarios?.nome}</td>
                     <td className="text-xs text-muted">{new Date(m.criado_em).toLocaleString('pt-BR')}</td>
@@ -119,7 +131,7 @@ export default function MovimentacoesPage() {
                 <label className="label">Produto</label>
                 <select className="select" value={form.produto_id} onChange={e => setForm(f => ({ ...f, produto_id: e.target.value }))}>
                   <option value="">Selecione...</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.sku})</option>)}
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
               <div className="field">
@@ -133,6 +145,28 @@ export default function MovimentacoesPage() {
                 <label className="label">Quantidade</label>
                 <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
               </div>
+
+              {form.tipo === 'entrada' && (
+                <>
+                  <div className="grid-2">
+                    <div className="field">
+                      <label className="label">Custo unitario (R$)</label>
+                      <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.custo_unitario} onChange={e => setForm(f => ({ ...f, custo_unitario: e.target.value }))} />
+                    </div>
+                    <div className="field">
+                      <label className="label">Custo total (R$)</label>
+                      <input
+                        className="input"
+                        type="text"
+                        readOnly
+                        value={custoTotal > 0 ? 'R$ ' + custoTotal.toFixed(2).replace('.', ',') : '—'}
+                        style={{ background: 'var(--bg)', color: 'var(--text-2)', cursor: 'not-allowed' }}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
               <div className="grid-2">
                 <div className="field">
                   <label className="label">Motivo</label>
