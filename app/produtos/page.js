@@ -24,7 +24,7 @@ export default function ProdutosPage() {
   async function carregar() {
     setLoading(true)
     try {
-      const [p, c] = await Promise.all([api.get(`/produtos?busca=${busca}`), api.get('/categorias')])
+      const [p, c] = await Promise.all([api.get('/produtos?busca=' + busca), api.get('/categorias')])
       setProdutos(p)
       setCategorias(c)
     } finally { setLoading(false) }
@@ -51,18 +51,12 @@ export default function ProdutosPage() {
 
   async function apagar(id) {
     if (!confirm('Tem certeza que deseja apagar este produto?')) return
-    try {
-      await api.put(`/produtos/${id}`, { ativo: false })
-      carregar()
-    } catch (e) { alert(e.message) }
+    try { await api.put('/produtos/' + id, { ativo: false }); carregar() } catch (e) { alert(e.message) }
   }
 
   async function apagarCategoria(id) {
     if (!confirm('Tem certeza que deseja apagar esta categoria?')) return
-    try {
-      await api.put(`/categorias/${id}`, { ativo: false })
-      carregar()
-    } catch (e) { alert(e.message) }
+    try { await api.put('/categorias/' + id, { ativo: false }); carregar() } catch (e) { alert(e.message) }
   }
 
   async function salvar() {
@@ -70,7 +64,7 @@ export default function ProdutosPage() {
     setSalvando(true)
     try {
       if (editando) {
-        await api.put(`/produtos/${editando.id}`, { ...form, valor_venda: Number(form.valor_venda) || 0 })
+        await api.put('/produtos/' + editando.id, { ...form, valor_venda: Number(form.valor_venda) || 0 })
       } else {
         const sku = 'P' + Date.now().toString().slice(-6)
         await api.post('/produtos', { ...form, sku, estoque_minimo: Number(form.estoque_minimo) || 0, valor_venda: Number(form.valor_venda) || 0 })
@@ -90,7 +84,6 @@ export default function ProdutosPage() {
       carregar()
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
-
   return (
     <AppLayout title="Produtos">
       <div className="flex items-center justify-between mb-4">
@@ -130,11 +123,11 @@ export default function ProdutosPage() {
                       <tr key={p.id}>
                         <td style={{ fontWeight: 500 }}>{p.nome}</td>
                         <td className="text-sm text-muted">{p.categorias?.nome}</td>
-                        <td><span className={`badge ${TIPO_BADGE[p.tipo]}`}>{TIPO_LABEL[p.tipo]}</span></td>
+                        <td><span className={'badge ' + TIPO_BADGE[p.tipo]}>{TIPO_LABEL[p.tipo]}</span></td>
                         <td className="text-sm">{p.unidade}</td>
                         <td className="text-sm">{p.estoque_minimo}</td>
                         <td className="text-sm font-semibold">
-                          {p.valor_venda ? `R$ ${Number(p.valor_venda).toFixed(2).replace('.', ',')}` : '-'}
+                          {p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}
                         </td>
                         <td>
                           {admin && (
@@ -169,11 +162,7 @@ export default function ProdutosPage() {
                     <tr key={c.id}>
                       <td style={{ fontWeight: 500 }}>{c.nome}</td>
                       <td className="text-sm text-muted">{c.descricao || '-'}</td>
-                      <td>
-                        {admin && (
-                          <button className="btn btn-danger btn-sm" onClick={() => apagarCategoria(c.id)}>Apagar</button>
-                        )}
-                      </td>
+                      <td>{admin && <button className="btn btn-danger btn-sm" onClick={() => apagarCategoria(c.id)}>Apagar</button>}</td>
                     </tr>
                   ))}
                 </tbody>
