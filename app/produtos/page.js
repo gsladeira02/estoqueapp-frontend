@@ -129,4 +129,155 @@ export default function ProdutosPage() {
                     {produtos.map(p => (
                       <tr key={p.id}>
                         <td style={{ fontWeight: 500 }}>{p.nome}</td>
-                        <td className="text-sm text-m
+                        <td className="text-sm text-muted">{p.categorias?.nome}</td>
+                        <td><span className={`badge ${TIPO_BADGE[p.tipo]}`}>{TIPO_LABEL[p.tipo]}</span></td>
+                        <td className="text-sm">{p.unidade}</td>
+                        <td className="text-sm">{p.estoque_minimo}</td>
+                        <td className="text-sm font-semibold">
+                          {p.valor_venda ? `R$ ${Number(p.valor_venda).toFixed(2).replace('.', ',')}` : '-'}
+                        </td>
+                        <td>
+                          {admin && (
+                            <div className="flex gap-2">
+                              <button className="btn btn-ghost btn-sm" onClick={() => abrirEditar(p)}>Editar</button>
+                              <button className="btn btn-danger btn-sm" onClick={() => apagar(p.id)}>Apagar</button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {aba === 'categorias' && (
+        <div className="card">
+          {loading ? (
+            <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><div className="spinner" /></div>
+          ) : categorias.length === 0 ? (
+            <div className="empty-state card-pad"><p className="text-sm">Nenhuma categoria cadastrada</p></div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Nome</th><th>Descricao</th><th></th></tr></thead>
+                <tbody>
+                  {categorias.map(c => (
+                    <tr key={c.id}>
+                      <td style={{ fontWeight: 500 }}>{c.nome}</td>
+                      <td className="text-sm text-muted">{c.descricao || '-'}</td>
+                      <td>
+                        {admin && (
+                          <button className="btn btn-danger btn-sm" onClick={() => apagarCategoria(c.id)}>Apagar</button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {modal && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2>{editando ? 'Editar produto' : 'Novo produto'}</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button>
+            </div>
+            <div className="modal-body">
+              <div className="field">
+                <label className="label">Nome *</label>
+                <input className="input" placeholder="Nome do produto" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} />
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label className="label">Categoria *</label>
+                  <select className="select" value={form.categoria_id} onChange={e => setForm(f => ({ ...f, categoria_id: e.target.value }))}>
+                    <option value="">Selecione...</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="label">Tipo *</label>
+                  <select className="select" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
+                    <option value="materia_prima">Materia-prima</option>
+                    <option value="revenda">Revenda</option>
+                    <option value="ambos">Ambos</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="field">
+                  <label className="label">Unidade *</label>
+                  <select className="select" value={form.unidade} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))}>
+                    <option value="un">un</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="L">L</option>
+                    <option value="ml">ml</option>
+                    <option value="m">m</option>
+                    <option value="cx">cx</option>
+                    <option value="pc">pc</option>
+                  </select>
+                </div>
+                <div className="field">
+                  <label className="label">Estoque minimo</label>
+                  <input className="input" type="number" min="0" step="0.001" placeholder="0" value={form.estoque_minimo} onChange={e => setForm(f => ({ ...f, estoque_minimo: e.target.value }))} />
+                </div>
+              </div>
+              <div className="field">
+                <label className="label">Valor de venda (R$)</label>
+                <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.valor_venda} onChange={e => setForm(f => ({ ...f, valor_venda: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label className="label">Descricao</label>
+                <textarea className="textarea" placeholder="Descricao opcional..." value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} />
+              </div>
+              {erro && <div className="alert alert-red text-sm">{erro}</div>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvando || !form.nome || !form.categoria_id}>
+                {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalCategoria && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setModalCategoria(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2>Nova categoria</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setModalCategoria(false)}>x</button>
+            </div>
+            <div className="modal-body">
+              <div className="field">
+                <label className="label">Nome *</label>
+                <input className="input" placeholder="Nome da categoria" value={formCat.nome} onChange={e => setFormCat(f => ({ ...f, nome: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label className="label">Descricao</label>
+                <input className="input" placeholder="Descricao opcional" value={formCat.descricao} onChange={e => setFormCat(f => ({ ...f, descricao: e.target.value }))} />
+              </div>
+              {erro && <div className="alert alert-red text-sm">{erro}</div>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalCategoria(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={salvarCategoria} disabled={salvando || !formCat.nome}>
+                {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppLayout>
+  )
+}
