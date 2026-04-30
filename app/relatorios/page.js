@@ -7,6 +7,7 @@ export default function RelatoriosPage() {
   const [posicao, setPosicao] = useState([])
   const [movimentacoes, setMovimentacoes] = useState([])
   const [transferencias, setTransferencias] = useState([])
+  const [vendas, setVendas] = useState([])
   const [categorias, setCategorias] = useState([])
   const [produtos, setProdutos] = useState([])
   const [estoques, setEstoques] = useState([])
@@ -50,6 +51,9 @@ export default function RelatoriosPage() {
       } else if (tipo === 'transferencias') {
         const data = await api.get('/transferencias?limite=500')
         setTransferencias(data.dados || [])
+      } else if (tipo === 'vendas') {
+        const data = await api.get('/vendas?limite=500')
+        setVendas(data.dados || [])
       }
     } finally { setLoading(false) }
   }
@@ -64,7 +68,7 @@ export default function RelatoriosPage() {
     let resultado = dados
     if (filtroCategoria && tipo === 'posicao') {
       resultado = resultado.filter(p => {
-        const prod = produtos.find(pr => pr.id === p.produto_id || pr.nome === p.produto)
+        const prod = produtos.find(pr => pr.nome === p.produto)
         return prod?.categoria_id === filtroCategoria
       })
     }
@@ -81,7 +85,9 @@ export default function RelatoriosPage() {
     ? aplicarFiltros(posicao)
     : tipo === 'movimentacoes'
     ? movimentacoes
-    : transferencias
+    : tipo === 'transferencias'
+    ? transferencias
+    : vendas
 
   async function gerarExcel() {
     setGerandoExcel(true)
@@ -113,6 +119,8 @@ export default function RelatoriosPage() {
           'Estoque': m.centros?.estoques?.nome,
           'Quantidade': m.quantidade,
           'Unidade': m.produtos?.unidade,
+          'Custo Unitario': m.custo_unitario || 0,
+          'Custo Total': m.custo_total || 0,
           'Motivo': m.motivo || '',
           'Documento': m.documento || '',
           'Usuario': m.usuarios?.nome,
@@ -129,6 +137,20 @@ export default function RelatoriosPage() {
           'Status': t.status,
           'Solicitante': t.solicitante?.nome,
           'Aprovador': t.admin?.nome || '',
+        }))
+      } else if (tipo === 'vendas') {
+        nomeArquivo = 'vendas.xlsx'
+        dados = dadosFiltrados.map(v => ({
+          'Data': new Date(v.criado_em).toLocaleString('pt-BR'),
+          'Produto': v.produtos?.nome,
+          'Centro': v.centros?.nome,
+          'Estoque': v.centros?.estoques?.nome,
+          'Quantidade': v.quantidade,
+          'Unidade': v.produtos?.unidade,
+          'Valor Unitario': v.valor_unitario,
+          'Valor Total': v.valor_total,
+          'Observacao': v.observacao || '',
+          'Usuario': v.usuarios?.nome,
         }))
       }
 
@@ -160,12 +182,13 @@ export default function RelatoriosPage() {
         ])
       } else if (tipo === 'movimentacoes') {
         titulo = 'Historico de Movimentacoes'
-        colunas = ['Data', 'Tipo', 'Produto', 'Centro', 'Qtd', 'Unid', 'Motivo', 'Usuario']
+        colunas = ['Data', 'Tipo', 'Produto', 'Centro', 'Qtd', 'Unid', 'Custo Unit.', 'Custo Total', 'Usuario']
         linhas = dadosFiltrados.map(m => [
           new Date(m.criado_em).toLocaleDateString('pt-BR'),
           m.tipo, m.produtos?.nome, m.centros?.nome,
           m.quantidade, m.produtos?.unidade,
-          m.motivo || '', m.usuarios?.nome
+          m.custo_unitario || 0, m.custo_total || 0,
+          m.usuarios?.nome
         ])
       } else if (tipo === 'transferencias') {
         titulo = 'Transferencias'
@@ -176,6 +199,17 @@ export default function RelatoriosPage() {
           t.centro_origem?.estoques?.nome + ' / ' + t.centro_origem?.nome,
           t.centro_destino?.estoques?.nome + ' / ' + t.centro_destino?.nome,
           t.status, t.solicitante?.nome
+        ])
+      } else if (tipo === 'vendas') {
+        titulo = 'Relatorio de Vendas'
+        colunas = ['Data', 'Produto', 'Centro', 'Qtd', 'Unid', 'Valor Unit.', 'Valor Total', 'Usuario']
+        linhas = dadosFiltrados.map(v => [
+          new Date(v.criado_em).toLocaleDateString('pt-BR'),
+          v.produtos?.nome, v.centros?.nome,
+          v.quantidade, v.produtos?.unidade,
+          'R$ ' + Number(v.valor_unitario).toFixed(2).replace('.', ','),
+          'R$ ' + Number(v.valor_total).toFixed(2).replace('.', ','),
+          v.usuarios?.nome
         ])
       }
 
@@ -217,6 +251,7 @@ export default function RelatoriosPage() {
         <button className={'btn btn-sm ' + (tipo === 'posicao' ? 'btn-primary' : 'btn-secondary')} onClick={() => setTipo('posicao')}>Posicao de Estoque</button>
         <button className={'btn btn-sm ' + (tipo === 'movimentacoes' ? 'btn-primary' : 'btn-secondary')} onClick={() => setTipo('movimentacoes')}>Movimentacoes</button>
         <button className={'btn btn-sm ' + (tipo === 'transferencias' ? 'btn-primary' : 'btn-secondary')} onClick={() => setTipo('transferencias')}>Transferencias</button>
+        <button className={'btn btn-sm ' + (tipo === 'vendas' ? 'btn-primary' : 'btn-secondary')} onClick={() => setTipo('vendas')}>Vendas</button>
       </div>
 
       <div className="card card-pad mb-4">
@@ -278,7 +313,7 @@ export default function RelatoriosPage() {
             )}
             {tipo === 'movimentacoes' && (
               <table>
-                <thead><tr><th>Data</th><th>Tipo</th><th>Produto</th><th>Centro</th><th>Quantidade</th><th>Motivo</th><th>Usuario</th></tr></thead>
+                <thead><tr><th>Data</th><th>Tipo</th><th>Produto</th><th>Centro</th><th>Quantidade</th><th>Custo Unit.</th><th>Custo Total</th><th>Usuario</th></tr></thead>
                 <tbody>
                   {dadosFiltrados.map(m => (
                     <tr key={m.id}>
@@ -287,7 +322,8 @@ export default function RelatoriosPage() {
                       <td style={{ fontWeight: 500 }}>{m.produtos?.nome}</td>
                       <td className="text-sm">{m.centros?.nome}</td>
                       <td style={{ fontWeight: 600 }}>{m.quantidade} {m.produtos?.unidade}</td>
-                      <td className="text-sm text-muted">{m.motivo || '-'}</td>
+                      <td className="text-sm">{m.custo_unitario ? 'R$ ' + Number(m.custo_unitario).toFixed(2).replace('.', ',') : '-'}</td>
+                      <td className="text-sm">{m.custo_total ? 'R$ ' + Number(m.custo_total).toFixed(2).replace('.', ',') : '-'}</td>
                       <td className="text-sm">{m.usuarios?.nome}</td>
                     </tr>
                   ))}
@@ -307,6 +343,24 @@ export default function RelatoriosPage() {
                       <td className="text-sm">{t.centro_destino?.estoques?.nome} / {t.centro_destino?.nome}</td>
                       <td><span className={'badge ' + (t.status === 'aprovada' ? 'badge-green' : t.status === 'pendente' ? 'badge-amber' : 'badge-red')}>{t.status}</span></td>
                       <td className="text-sm">{t.solicitante?.nome}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {tipo === 'vendas' && (
+              <table>
+                <thead><tr><th>Data</th><th>Produto</th><th>Centro</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Usuario</th></tr></thead>
+                <tbody>
+                  {dadosFiltrados.map(v => (
+                    <tr key={v.id}>
+                      <td className="text-xs">{new Date(v.criado_em).toLocaleString('pt-BR')}</td>
+                      <td style={{ fontWeight: 500 }}>{v.produtos?.nome}</td>
+                      <td className="text-sm">{v.centros?.nome}</td>
+                      <td>{v.quantidade} {v.produtos?.unidade}</td>
+                      <td className="text-sm">R$ {Number(v.valor_unitario).toFixed(2).replace('.', ',')}</td>
+                      <td style={{ fontWeight: 600 }}>R$ {Number(v.valor_total).toFixed(2).replace('.', ',')}</td>
+                      <td className="text-sm">{v.usuarios?.nome}</td>
                     </tr>
                   ))}
                 </tbody>
