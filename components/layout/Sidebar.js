@@ -18,6 +18,7 @@ export default function Sidebar({ open, onClose }) {
   ]
 
   const adminItems = [
+    { href: '/vendas', label: 'Vendas' },
     { href: '/estoques', label: 'Estoques e Centros' },
     { href: '/usuarios', label: 'Usuarios' },
   ]
@@ -43,7 +44,7 @@ export default function Sidebar({ open, onClose }) {
         <div className="nav-section">
           <div className="nav-label">Geral</div>
           {navItems.map(item => (
-            <Link key={item.href} href={item.href} className={`nav-item${pathname === item.href ? ' active' : ''}`} onClick={onClose}>
+            <Link key={item.href} href={item.href} className={'nav-item' + (pathname === item.href ? ' active' : '')} onClick={onClose}>
               {item.label}
             </Link>
           ))}
@@ -52,7 +53,7 @@ export default function Sidebar({ open, onClose }) {
             <>
               <div className="nav-label" style={{ marginTop: '.75rem' }}>Administracao</div>
               {adminItems.map(item => (
-                <Link key={item.href} href={item.href} className={`nav-item${pathname === item.href ? ' active' : ''}`} onClick={onClose}>
+                <Link key={item.href} href={item.href} className={'nav-item' + (pathname === item.href ? ' active' : '')} onClick={onClose}>
                   {item.label}
                 </Link>
               ))}
