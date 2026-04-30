@@ -14,11 +14,11 @@ export default function Sidebar({ open, onClose }) {
     { href: '/movimentacoes', label: 'Movimentacoes' },
     { href: '/transferencias', label: 'Transferencias' },
     { href: '/produtos', label: 'Produtos' },
-    { href: '/relatorios', label: 'Relatorios' },
   ]
 
   const adminItems = [
     { href: '/vendas', label: 'Vendas' },
+    { href: '/relatorios', label: 'Relatorios' },
     { href: '/estoques', label: 'Estoques e Centros' },
     { href: '/usuarios', label: 'Usuarios' },
   ]
@@ -28,7 +28,7 @@ export default function Sidebar({ open, onClose }) {
       {open && (
         <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', zIndex: 99 }} />
       )}
-      <aside className={`sidebar${open ? ' open' : ''}`}>
+      <aside className={'sidebar' + (open ? ' open' : '')}>
         <div className="nav-logo">
           <div className="logo-mark">
             <div className="logo-icon">
