@@ -19,6 +19,7 @@ export default function Sidebar({ open, onClose }) {
   const adminItems = [
     { href: '/vendas', label: 'Vendas' },
     { href: '/relatorios', label: 'Relatorios' },
+    { href: '/historico', label: 'Historico' },
     { href: '/estoques', label: 'Estoques e Centros' },
     { href: '/usuarios', label: 'Usuarios' },
   ]
