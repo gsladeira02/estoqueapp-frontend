@@ -23,8 +23,8 @@ export default function TransferenciasPage() {
   async function carregar() {
     setLoading(true)
     try {
-      const params = filtroStatus ? `?status=${filtroStatus}` : ''
-      const data = await api.get(`/transferencias${params}`)
+      const params = filtroStatus ? '?status=' + filtroStatus : ''
+      const data = await api.get('/transferencias' + params)
       setLista(data.dados || [])
     } finally { setLoading(false) }
   }
@@ -53,7 +53,7 @@ export default function TransferenciasPage() {
   async function resolver(acao) {
     setSalvando(true)
     try {
-      await api.patch(`/transferencias/${modalAprovar.id}/resolver`, { acao, motivo_rejeicao: motivoRejeicao })
+      await api.patch('/transferencias/' + modalAprovar.id + '/resolver', { acao, motivo_rejeicao: motivoRejeicao })
       setModalAprovar(null)
       carregar()
     } catch (e) { alert(e.message) } finally { setSalvando(false) }
@@ -61,7 +61,7 @@ export default function TransferenciasPage() {
 
   async function cancelar(id) {
     if (!confirm('Cancelar esta transferencia?')) return
-    try { await api.patch(`/transferencias/${id}/cancelar`, {}); carregar() } catch (e) { alert(e.message) }
+    try { await api.patch('/transferencias/' + id + '/cancelar', {}); carregar() } catch (e) { alert(e.message) }
   }
 
   function imprimirRomaneio(t) {
@@ -89,16 +89,12 @@ export default function TransferenciasPage() {
           .linha-assinatura { width: 100%; border-bottom: 1px solid #000; margin-top: 40px; }
           .assinatura-label { font-size: 11px; color: #555; }
           .rodape { text-align: center; font-size: 10px; color: #aaa; margin-top: 20px; }
-          @media print {
-            body { padding: 15px; }
-            button { display: none; }
-          }
+          @media print { body { padding: 15px; } button { display: none; } }
         </style>
       </head>
       <body>
         <h1>Romaneio de Transferencia</h1>
         <p class="subtitulo">Documento de controle de movimentacao entre estoques</p>
-
         <div class="secao">
           <div class="secao-titulo">Informacoes da Transferencia</div>
           <div class="grid">
@@ -110,23 +106,14 @@ export default function TransferenciasPage() {
               <span class="campo-label">Status</span>
               <span class="campo-valor">${STATUS_LABEL[t.status]}</span>
             </div>
-            ${t.resolvido_em ? `
-            <div class="campo">
-              <span class="campo-label">Data de aprovacao</span>
-              <span class="campo-valor">${new Date(t.resolvido_em).toLocaleString('pt-BR')}</span>
-            </div>` : ''}
+            ${t.resolvido_em ? '<div class="campo"><span class="campo-label">Data de aprovacao</span><span class="campo-valor">' + new Date(t.resolvido_em).toLocaleString('pt-BR') + '</span></div>' : ''}
             <div class="campo">
               <span class="campo-label">Solicitante</span>
               <span class="campo-valor">${t.solicitante?.nome || '-'}</span>
             </div>
-            ${t.admin ? `
-            <div class="campo">
-              <span class="campo-label">Aprovado por</span>
-              <span class="campo-valor">${t.admin?.nome}</span>
-            </div>` : ''}
+            ${t.admin ? '<div class="campo"><span class="campo-label">Aprovado por</span><span class="campo-valor">' + t.admin?.nome + '</span></div>' : ''}
           </div>
         </div>
-
         <div class="secao">
           <div class="secao-titulo">Produto</div>
           <div class="grid">
@@ -140,7 +127,6 @@ export default function TransferenciasPage() {
             </div>
           </div>
         </div>
-
         <div class="secao">
           <div class="secao-titulo">Origem e Destino</div>
           <div class="grid">
@@ -157,33 +143,17 @@ export default function TransferenciasPage() {
               <span class="campo-valor">${t.centro_destino?.nome}</span>
             </div>
           </div>
-          ${t.observacao ? `
-          <div class="campo" style="margin-top:12px">
-            <span class="campo-label">Observacao</span>
-            <span class="campo-valor">${t.observacao}</span>
-          </div>` : ''}
+          ${t.observacao ? '<div class="campo" style="margin-top:12px"><span class="campo-label">Observacao</span><span class="campo-valor">' + t.observacao + '</span></div>' : ''}
         </div>
-
         <div class="secao">
           <div class="secao-titulo">Assinaturas</div>
           <div class="assinaturas">
-            <div class="assinatura">
-              <div class="linha-assinatura"></div>
-              <span class="assinatura-label">Remetente</span>
-            </div>
-            <div class="assinatura">
-              <div class="linha-assinatura"></div>
-              <span class="assinatura-label">Motorista</span>
-            </div>
-            <div class="assinatura">
-              <div class="linha-assinatura"></div>
-              <span class="assinatura-label">Destinatario</span>
-            </div>
+            <div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Remetente</span></div>
+            <div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Motorista</span></div>
+            <div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Destinatario</span></div>
           </div>
         </div>
-
         <div class="rodape">Documento gerado em ${new Date().toLocaleString('pt-BR')}</div>
-
         <script>window.onload = function() { window.print() }</script>
       </body>
       </html>
@@ -203,7 +173,7 @@ export default function TransferenciasPage() {
 
       <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
         {['', 'pendente', 'aprovada', 'rejeitada', 'cancelada'].map(s => (
-          <button key={s} className={`btn btn-sm ${filtroStatus === s ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setFiltroStatus(s)}>
+          <button key={s} className={'btn btn-sm ' + (filtroStatus === s ? 'btn-primary' : 'btn-secondary')} onClick={() => setFiltroStatus(s)}>
             {s === '' ? 'Todas' : STATUS_LABEL[s]}
           </button>
         ))}
@@ -217,15 +187,21 @@ export default function TransferenciasPage() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Produto</th><th>Origem / Destino</th><th>Qtd</th><th>Solicitante</th><th>Status</th><th>Data</th><th></th></tr></thead>
+              <thead>
+                <tr><th>Produto</th><th>Origem / Destino</th><th>Qtd</th><th>Solicitante</th><th>Aprovado por</th><th>Status</th><th>Data</th><th></th></tr>
+              </thead>
               <tbody>
                 {lista.map(t => (
                   <tr key={t.id}>
-                    <td><div style={{ fontWeight: 500 }}>{t.produtos?.nome}</div><div className="text-xs text-muted">{t.produtos?.sku}</div></td>
-                    <td><div className="text-sm">{t.centro_origem?.estoques?.nome} / {t.centro_origem?.nome}</div><div className="text-xs text-muted">para {t.centro_destino?.estoques?.nome} / {t.centro_destino?.nome}</div></td>
+                    <td><div style={{ fontWeight: 500 }}>{t.produtos?.nome}</div></td>
+                    <td>
+                      <div className="text-sm">{t.centro_origem?.estoques?.nome} / {t.centro_origem?.nome}</div>
+                      <div className="text-xs text-muted">para {t.centro_destino?.estoques?.nome} / {t.centro_destino?.nome}</div>
+                    </td>
                     <td>{t.quantidade} {t.produtos?.unidade}</td>
                     <td className="text-sm">{t.solicitante?.nome}</td>
-                    <td><span className={`badge ${STATUS_BADGE[t.status]}`}>{STATUS_LABEL[t.status]}</span></td>
+                    <td className="text-sm">{t.admin?.nome || <span className="text-muted">-</span>}</td>
+                    <td><span className={'badge ' + STATUS_BADGE[t.status]}>{STATUS_LABEL[t.status]}</span></td>
                     <td className="text-xs text-muted">{new Date(t.solicitado_em).toLocaleDateString('pt-BR')}</td>
                     <td>
                       <div className="flex gap-2">
