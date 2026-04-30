@@ -84,6 +84,7 @@ export default function ProdutosPage() {
       carregar()
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
+
   return (
     <AppLayout title="Produtos">
       <div className="flex items-center justify-between mb-4">
