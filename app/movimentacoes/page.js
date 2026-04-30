@@ -17,17 +17,23 @@ export default function MovimentacoesPage() {
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [dataInicio, setDataInicio] = useState('')
+  const [dataFim, setDataFim] = useState('')
 
   async function carregar() {
     setLoading(true)
     try {
-      const params = filtroTipo ? '?tipo=' + filtroTipo : ''
-      const data = await api.get('/movimentacoes' + params)
+      const params = new URLSearchParams()
+      if (filtroTipo) params.append('tipo', filtroTipo)
+      if (dataInicio) params.append('data_inicio', dataInicio)
+      if (dataFim) params.append('data_fim', dataFim + 'T23:59:59')
+      params.append('limite', '200')
+      const data = await api.get('/movimentacoes?' + params)
       setMovs(data.dados || [])
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { carregar() }, [filtroTipo])
+  useEffect(() => { carregar() }, [filtroTipo, dataInicio, dataFim])
 
   async function abrirModal() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
@@ -56,6 +62,12 @@ export default function MovimentacoesPage() {
 
   const custoTotal = Number(form.quantidade || 0) * Number(form.custo_unitario || 0)
 
+  function limparFiltros() {
+    setFiltroTipo('')
+    setDataInicio('')
+    setDataFim('')
+  }
+
   return (
     <AppLayout title="Movimentacoes">
       <div className="flex items-center justify-between mb-4">
@@ -68,12 +80,30 @@ export default function MovimentacoesPage() {
 
       {sucesso && <div className="alert alert-green mb-4">{sucesso}</div>}
 
-      <div className="flex gap-2 mb-4" style={{ flexWrap: 'wrap' }}>
-        {['', 'entrada', 'saida', 'ajuste'].map(t => (
-          <button key={t} className={'btn btn-sm ' + (filtroTipo === t ? 'btn-primary' : 'btn-secondary')} onClick={() => setFiltroTipo(t)}>
-            {t === '' ? 'Todos' : TIPOS[t]}
-          </button>
-        ))}
+      <div className="card card-pad mb-4">
+        <div className="grid-2" style={{ gap: '1rem' }}>
+          <div className="field">
+            <label className="label">Tipo</label>
+            <select className="select" value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}>
+              <option value="">Todos</option>
+              <option value="entrada">Entrada</option>
+              <option value="saida">Saida</option>
+              <option value="ajuste">Ajuste</option>
+            </select>
+          </div>
+          <div className="field">
+            <label className="label">Data inicio</label>
+            <input className="input" type="date" value={dataInicio} onChange={e => setDataInicio(e.target.value)} />
+          </div>
+          <div className="field">
+            <label className="label">Data fim</label>
+            <input className="input" type="date" value={dataFim} onChange={e => setDataFim(e.target.value)} />
+          </div>
+          <div className="field" style={{ display: 'flex', alignItems: 'flex-end', gap: '.5rem' }}>
+            <button className="btn btn-ghost btn-sm" onClick={limparFiltros}>Limpar filtros</button>
+            <button className="btn btn-ghost btn-sm" onClick={carregar}>Atualizar</button>
+          </div>
+        </div>
       </div>
 
       <div className="card">
@@ -94,12 +124,8 @@ export default function MovimentacoesPage() {
                     <td><div>{m.centros?.nome}</div><div className="text-xs text-muted">{m.centros?.estoques?.nome}</div></td>
                     <td><span className={'badge ' + BADGE[m.tipo]}>{TIPOS[m.tipo]}</span></td>
                     <td style={{ fontWeight: 600 }}>{m.quantidade} {m.produtos?.unidade}</td>
-                    <td className="text-sm">
-                      {m.custo_unitario ? `R$ ${Number(m.custo_unitario).toFixed(2).replace('.', ',')}` : '-'}
-                    </td>
-                    <td className="text-sm font-semibold">
-                      {m.custo_total ? `R$ ${Number(m.custo_total).toFixed(2).replace('.', ',')}` : '-'}
-                    </td>
+                    <td className="text-sm">{m.custo_unitario ? 'R$ ' + Number(m.custo_unitario).toFixed(2).replace('.', ',') : '-'}</td>
+                    <td className="text-sm font-semibold">{m.custo_total ? 'R$ ' + Number(m.custo_total).toFixed(2).replace('.', ',') : '-'}</td>
                     <td className="text-sm text-muted">{m.motivo || '-'}</td>
                     <td className="text-sm">{m.usuarios?.nome}</td>
                     <td className="text-xs text-muted">{new Date(m.criado_em).toLocaleString('pt-BR')}</td>
@@ -145,28 +171,18 @@ export default function MovimentacoesPage() {
                 <label className="label">Quantidade</label>
                 <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
               </div>
-
               {form.tipo === 'entrada' && (
-                <>
-                  <div className="grid-2">
-                    <div className="field">
-                      <label className="label">Custo unitario (R$)</label>
-                      <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.custo_unitario} onChange={e => setForm(f => ({ ...f, custo_unitario: e.target.value }))} />
-                    </div>
-                    <div className="field">
-                      <label className="label">Custo total (R$)</label>
-                      <input
-                        className="input"
-                        type="text"
-                        readOnly
-                        value={custoTotal > 0 ? 'R$ ' + custoTotal.toFixed(2).replace('.', ',') : '—'}
-                        style={{ background: 'var(--bg)', color: 'var(--text-2)', cursor: 'not-allowed' }}
-                      />
-                    </div>
+                <div className="grid-2">
+                  <div className="field">
+                    <label className="label">Custo unitario (R$)</label>
+                    <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.custo_unitario} onChange={e => setForm(f => ({ ...f, custo_unitario: e.target.value }))} />
                   </div>
-                </>
+                  <div className="field">
+                    <label className="label">Custo total (R$)</label>
+                    <input className="input" type="text" readOnly value={custoTotal > 0 ? 'R$ ' + custoTotal.toFixed(2).replace('.', ',') : '-'} style={{ background: 'var(--bg)', color: 'var(--text-2)', cursor: 'not-allowed' }} />
+                  </div>
+                </div>
               )}
-
               <div className="grid-2">
                 <div className="field">
                   <label className="label">Motivo</label>
