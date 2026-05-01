@@ -9,7 +9,7 @@ export default function VendasPage() {
   const [modal, setModal] = useState(false)
   const [produtos, setProdutos] = useState([])
   const [centros, setCentros] = useState([])
-  const [form, setForm] = useState({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '' })
+  const [form, setForm] = useState({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '', data_venda: new Date().toISOString().split('T')[0] })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
@@ -34,7 +34,7 @@ export default function VendasPage() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
     setProdutos(p)
     setCentros(c)
-    setForm({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '' })
+    setForm({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '', data_venda: new Date().toISOString().split('T')[0] })
     setErro('')
     setModal(true)
   }
@@ -50,7 +50,12 @@ export default function VendasPage() {
     setErro('')
     setSalvando(true)
     try {
-      await api.post('/vendas', { ...form, quantidade: Number(form.quantidade), valor_unitario: Number(form.valor_unitario) })
+      await api.post('/vendas', {
+        ...form,
+        quantidade: Number(form.quantidade),
+        valor_unitario: Number(form.valor_unitario),
+        data_venda: form.data_venda || new Date().toISOString().split('T')[0]
+      })
       setSucesso('Venda registrada com sucesso!')
       setModal(false)
       carregar()
@@ -107,10 +112,11 @@ export default function VendasPage() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Produto</th><th>Centro</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Observacao</th><th>Usuario</th><th>Data</th><th></th></tr></thead>
+              <thead><tr><th>Data Venda</th><th>Produto</th><th>Centro</th><th>Quantidade</th><th>Valor Unit.</th><th>Valor Total</th><th>Observacao</th><th>Usuario</th><th></th></tr></thead>
               <tbody>
                 {vendas.map(v => (
                   <tr key={v.id}>
+                    <td className="text-sm">{v.data_venda ? new Date(v.data_venda + 'T00:00:00').toLocaleDateString('pt-BR') : new Date(v.criado_em).toLocaleDateString('pt-BR')}</td>
                     <td style={{ fontWeight: 500 }}>{v.produtos?.nome}</td>
                     <td><div>{v.centros?.nome}</div><div className="text-xs text-muted">{v.centros?.estoques?.nome}</div></td>
                     <td>{v.quantidade} {v.produtos?.unidade}</td>
@@ -118,7 +124,6 @@ export default function VendasPage() {
                     <td style={{ fontWeight: 600 }}>R$ {Number(v.valor_total).toFixed(2).replace('.', ',')}</td>
                     <td className="text-sm text-muted">{v.observacao || '-'}</td>
                     <td className="text-sm">{v.usuarios?.nome}</td>
-                    <td className="text-xs text-muted">{new Date(v.criado_em).toLocaleString('pt-BR')}</td>
                     <td><button className="btn btn-danger btn-sm" onClick={() => remover(v.id)}>Remover</button></td>
                   </tr>
                 ))}
@@ -133,28 +138,40 @@ export default function VendasPage() {
           <div className="modal">
             <div className="modal-header"><h2>Nova Venda</h2><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button></div>
             <div className="modal-body">
-              <div className="field"><label className="label">Produto</label>
+              <div className="field">
+                <label className="label">Data da venda</label>
+                <input className="input" type="date" value={form.data_venda} onChange={e => setForm(f => ({ ...f, data_venda: e.target.value }))} />
+              </div>
+              <div className="field">
+                <label className="label">Produto</label>
                 <select className="select" value={form.produto_id} onChange={e => selecionarProduto(e.target.value)}>
-                  <option value="">Selecione...</option>{produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  <option value="">Selecione...</option>
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
                 </select>
               </div>
-              <div className="field"><label className="label">Centro de estoque</label>
+              <div className="field">
+                <label className="label">Centro de estoque</label>
                 <select className="select" value={form.centro_id} onChange={e => setForm(f => ({ ...f, centro_id: e.target.value }))}>
-                  <option value="">Selecione...</option>{centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
+                  <option value="">Selecione...</option>
+                  {centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
                 </select>
               </div>
               <div className="grid-2">
-                <div className="field"><label className="label">Quantidade</label>
+                <div className="field">
+                  <label className="label">Quantidade</label>
                   <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
                 </div>
-                <div className="field"><label className="label">Valor unitario (R$)</label>
+                <div className="field">
+                  <label className="label">Valor unitario (R$)</label>
                   <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.valor_unitario} onChange={e => setForm(f => ({ ...f, valor_unitario: e.target.value }))} />
                 </div>
               </div>
-              <div className="field"><label className="label">Valor total (R$)</label>
+              <div className="field">
+                <label className="label">Valor total (R$)</label>
                 <input className="input" type="text" readOnly value={valorTotal > 0 ? 'R$ ' + valorTotal.toFixed(2).replace('.', ',') : '-'} style={{ background: 'var(--bg)', color: 'var(--text-2)', cursor: 'not-allowed' }} />
               </div>
-              <div className="field"><label className="label">Observacao</label>
+              <div className="field">
+                <label className="label">Observacao</label>
                 <input className="input" placeholder="Observacao opcional..." value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} />
               </div>
               {erro && <div className="alert alert-red text-sm">{erro}</div>}
