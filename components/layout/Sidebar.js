@@ -9,21 +9,21 @@ export default function Sidebar({ open, onClose }) {
   const admin = isAdmin()
 
   const navItems = [
-     { href: '/movimentacoes', label: 'Movimentacoes' },
     { href: '/dashboard', label: 'Painel' },
     { href: '/posicao', label: 'Posicao de Estoque' },
+    { href: '/movimentacoes', label: 'Movimentacoes' },
+    { href: '/transferencias', label: 'Transferencias' },
     { href: '/produtos', label: 'Produtos' },
-    { href: '/transferencias', label: 'Transferencias' }, 
   ]
 
   const adminItems = [
-{ href: '/estoques', label: 'Estoques e Centros' },
-    { href: '/etiquetas', label: 'Etiquetas' },
-    { href: '/historico', label: 'Historico' },
-     { href: '/relatorios', label: 'Relatorios' },
-    { href: '/sugestao', label: 'Sugestao de Compras' },
-   { href: '/usuarios', label: 'Usuarios' },
     { href: '/vendas', label: 'Vendas' },
+    { href: '/relatorios', label: 'Relatorios' },
+    { href: '/historico', label: 'Historico' },
+    { href: '/sugestao', label: 'Sugestao de Compras' },
+    { href: '/etiquetas', label: 'Etiquetas' },
+    { href: '/estoques', label: 'Estoques e Centros' },
+    { href: '/usuarios', label: 'Usuarios' },
   ]
 
   return (
@@ -31,8 +31,8 @@ export default function Sidebar({ open, onClose }) {
       {open && (
         <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.3)', zIndex: 99 }} />
       )}
-      <aside className={'sidebar' + (open ? ' open' : '')}>
-        <div className="nav-logo">
+      <aside className={'sidebar' + (open ? ' open' : '')} style={{ display: 'flex', flexDirection: 'column', height: '100dvh' }}>
+        <div className="nav-logo" style={{ flexShrink: 0 }}>
           <div className="logo-mark">
             <div className="logo-icon">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
@@ -44,7 +44,7 @@ export default function Sidebar({ open, onClose }) {
           </div>
         </div>
 
-        <div className="nav-section">
+        <div className="nav-section" style={{ flex: 1, overflowY: 'auto', paddingBottom: '.5rem' }}>
           <div className="nav-label">Geral</div>
           {navItems.map(item => (
             <Link key={item.href} href={item.href} className={'nav-item' + (pathname === item.href ? ' active' : '')} onClick={onClose}>
@@ -64,7 +64,7 @@ export default function Sidebar({ open, onClose }) {
           )}
         </div>
 
-        <div className="nav-footer">
+        <div className="nav-footer" style={{ flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.5rem' }}>
             <div style={{ width: 30, height: 30, borderRadius: '50%', background: 'var(--accent-s)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <span style={{ fontSize: '.75rem', fontWeight: 700, color: 'var(--accent)' }}>
