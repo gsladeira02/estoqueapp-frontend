@@ -8,19 +8,27 @@ const PRIORIDADE_LABEL = { urgente: 'Urgente', alto: 'Alto', medio: 'Medio' }
 
 export default function SugestaoComprasPage() {
   const [sugestoes, setSugestoes] = useState([])
+  const [estoques, setEstoques] = useState([])
+  const [filtroEstoque, setFiltroEstoque] = useState('')
   const [loading, setLoading] = useState(true)
   const [gerandoExcel, setGerandoExcel] = useState(false)
   const [gerandoPdf, setGerandoPdf] = useState(false)
 
+  useEffect(() => {
+    api.get('/estoques').then(data => setEstoques(data))
+  }, [])
+
   async function carregar() {
     setLoading(true)
     try {
-      const data = await api.get('/analytics/sugestao-compras')
+      const params = new URLSearchParams()
+      if (filtroEstoque) params.append('estoque_id', filtroEstoque)
+      const data = await api.get('/analytics/sugestao-compras?' + params)
       setSugestoes(data)
     } finally { setLoading(false) }
   }
 
-  useEffect(() => { carregar() }, [])
+  useEffect(() => { carregar() }, [filtroEstoque])
 
   async function gerarExcel() {
     setGerandoExcel(true)
@@ -49,11 +57,13 @@ export default function SugestaoComprasPage() {
       const jsPDF = (await import('jspdf')).default
       await import('jspdf-autotable')
       const doc = new jsPDF({ orientation: 'landscape' })
+      const estoqueNome = filtroEstoque ? estoques.find(e => e.id === filtroEstoque)?.nome : 'Todos os estoques'
       doc.setFontSize(14)
       doc.text('Sugestao de Compras', 14, 15)
       doc.setFontSize(9)
       doc.text('Gerado em: ' + new Date().toLocaleString('pt-BR'), 14, 22)
-      doc.text('Baseado nas vendas da ultima semana e estoque minimo', 14, 28)
+      doc.text('Estoque: ' + estoqueNome, 14, 28)
+      doc.text('Baseado nas vendas da ultima semana e estoque minimo', 14, 34)
       doc.autoTable({
         head: [['Prioridade', 'Produto', 'Unid', 'Estoque Atual', 'Est. Minimo', 'Venda Semanal', 'Est. Ideal', 'Qtd Sugerida']],
         body: sugestoes.map(s => [
@@ -66,17 +76,9 @@ export default function SugestaoComprasPage() {
           s.estoque_ideal,
           s.quantidade_sugerida
         ]),
-        startY: 34,
+        startY: 40,
         styles: { fontSize: 8 },
         headStyles: { fillColor: [37, 99, 235] },
-        didParseCell: function(data) {
-          if (data.column.index === 0 && data.section === 'body') {
-            const row = sugestoes[data.row.index]
-            if (row?.prioridade === 'urgente') data.cell.styles.textColor = [220, 38, 38]
-            else if (row?.prioridade === 'alto') data.cell.styles.textColor = [217, 119, 6]
-            else data.cell.styles.textColor = [37, 99, 235]
-          }
-        }
       })
       doc.save('sugestao_compras.pdf')
     } finally { setGerandoPdf(false) }
@@ -101,6 +103,16 @@ export default function SugestaoComprasPage() {
           <button className="btn btn-primary" onClick={gerarPdf} disabled={gerandoPdf || sugestoes.length === 0}>
             {gerandoPdf ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Exportar PDF'}
           </button>
+        </div>
+      </div>
+
+      <div className="card card-pad mb-4">
+        <div className="field" style={{ maxWidth: 320 }}>
+          <label className="label">Filtrar por estoque</label>
+          <select className="select" value={filtroEstoque} onChange={e => setFiltroEstoque(e.target.value)}>
+            <option value="">Todos os estoques</option>
+            {estoques.map(e => <option key={e.id} value={e.id}>{e.nome}</option>)}
+          </select>
         </div>
       </div>
 
