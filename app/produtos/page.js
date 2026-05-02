@@ -14,7 +14,7 @@ export default function ProdutosPage() {
   const [modal, setModal] = useState(false)
   const [modalCategoria, setModalCategoria] = useState(false)
   const [editando, setEditando] = useState(null)
-  const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '' })
+  const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
   const [formCat, setFormCat] = useState({ nome: '', descricao: '' })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -37,14 +37,14 @@ export default function ProdutosPage() {
 
   function abrirNovo() {
     setEditando(null)
-    setForm({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '' })
+    setForm({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
     setErro('')
     setModal(true)
   }
 
   function abrirEditar(p) {
     setEditando(p)
-    setForm({ nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo, valor_venda: p.valor_venda || '' })
+    setForm({ nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo, valor_venda: p.valor_venda || '', dias_validade: p.dias_validade || '' })
     setErro('')
     setModal(true)
   }
@@ -64,10 +64,10 @@ export default function ProdutosPage() {
     setSalvando(true)
     try {
       if (editando) {
-        await api.put('/produtos/' + editando.id, { ...form, valor_venda: Number(form.valor_venda) || 0 })
+        await api.put('/produtos/' + editando.id, { ...form, valor_venda: Number(form.valor_venda) || 0, dias_validade: form.dias_validade ? Number(form.dias_validade) : null })
       } else {
         const sku = 'P' + Date.now().toString().slice(-6)
-        await api.post('/produtos', { ...form, sku, estoque_minimo: Number(form.estoque_minimo) || 0, valor_venda: Number(form.valor_venda) || 0 })
+        await api.post('/produtos', { ...form, sku, estoque_minimo: Number(form.estoque_minimo) || 0, valor_venda: Number(form.valor_venda) || 0, dias_validade: form.dias_validade ? Number(form.dias_validade) : null })
       }
       setModal(false)
       carregar()
@@ -118,7 +118,7 @@ export default function ProdutosPage() {
             ) : (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Unidade</th><th>Min.</th><th>Valor Venda</th><th></th></tr></thead>
+                  <thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Unidade</th><th>Min.</th><th>Valor Venda</th><th>Dias Validade</th><th></th></tr></thead>
                   <tbody>
                     {produtos.map(p => (
                       <tr key={p.id}>
@@ -127,9 +127,8 @@ export default function ProdutosPage() {
                         <td><span className={'badge ' + TIPO_BADGE[p.tipo]}>{TIPO_LABEL[p.tipo]}</span></td>
                         <td className="text-sm">{p.unidade}</td>
                         <td className="text-sm">{p.estoque_minimo}</td>
-                        <td className="text-sm font-semibold">
-                          {p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}
-                        </td>
+                        <td className="text-sm font-semibold">{p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}</td>
+                        <td className="text-sm">{p.dias_validade ? p.dias_validade + ' dias' : '-'}</td>
                         <td>
                           {admin && (
                             <div className="flex gap-2">
@@ -221,9 +220,15 @@ export default function ProdutosPage() {
                   <input className="input" type="number" min="0" step="0.001" placeholder="0" value={form.estoque_minimo} onChange={e => setForm(f => ({ ...f, estoque_minimo: e.target.value }))} />
                 </div>
               </div>
-              <div className="field">
-                <label className="label">Valor de venda (R$)</label>
-                <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.valor_venda} onChange={e => setForm(f => ({ ...f, valor_venda: e.target.value }))} />
+              <div className="grid-2">
+                <div className="field">
+                  <label className="label">Valor de venda (R$)</label>
+                  <input className="input" type="number" min="0" step="0.01" placeholder="0,00" value={form.valor_venda} onChange={e => setForm(f => ({ ...f, valor_venda: e.target.value }))} />
+                </div>
+                <div className="field">
+                  <label className="label">Dias de validade</label>
+                  <input className="input" type="number" min="1" placeholder="Ex: 30" value={form.dias_validade} onChange={e => setForm(f => ({ ...f, dias_validade: e.target.value }))} />
+                </div>
               </div>
               <div className="field">
                 <label className="label">Descricao</label>
