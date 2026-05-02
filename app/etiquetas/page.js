@@ -7,6 +7,7 @@ export default function EtiquetasPage() {
   const [produtos, setProdutos] = useState([])
   const [produtoSelecionado, setProdutoSelecionado] = useState(null)
   const [fabricacao, setFabricacao] = useState(new Date().toISOString().split('T')[0])
+  const [quantidade, setQuantidade] = useState('')
   const [copias, setCopias] = useState(1)
   const [loading, setLoading] = useState(true)
 
@@ -54,18 +55,22 @@ export default function EtiquetasPage() {
             page-break-after: always;
           }
           .etiqueta:last-child { page-break-after: avoid; }
-          .topo { text-align: center; border-bottom: 1px solid #000; padding-bottom: 4mm; margin-bottom: 4mm; }
+          .topo { text-align: center; border-bottom: 1px solid #000; padding-bottom: 3mm; margin-bottom: 3mm; }
           .empresa { font-size: 10pt; font-weight: bold; text-transform: uppercase; letter-spacing: .05em; }
-          .produto-nome { font-size: 18pt; font-weight: 900; text-align: center; line-height: 1.2; margin: 4mm 0; text-transform: uppercase; }
-          .datas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3mm; margin: 3mm 0; }
-          .data-item { border: 2px solid #000; border-radius: 2mm; padding: 3mm; text-align: center; }
-          .data-label { font-size: 7pt; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 2mm; font-weight: bold; }
-          .data-valor { font-size: 13pt; font-weight: 900; }
-          .validade-box { border: 3px solid #000; border-radius: 2mm; padding: 4mm; text-align: center; margin: 3mm 0; background: #f0f0f0; }
-          .validade-label { font-size: 8pt; text-transform: uppercase; letter-spacing: .05em; font-weight: bold; margin-bottom: 2mm; }
-          .validade-valor { font-size: 22pt; font-weight: 900; letter-spacing: .05em; }
-          .dias-info { font-size: 8pt; color: #555; margin-top: 1mm; }
-          .rodape { text-align: center; font-size: 7pt; color: #777; border-top: 1px solid #ccc; padding-top: 2mm; }
+          .produto-nome { font-size: 16pt; font-weight: 900; text-align: center; line-height: 1.2; margin: 3mm 0; text-transform: uppercase; }
+          .info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 2mm; margin: 2mm 0; }
+          .info-item { border: 1px solid #000; border-radius: 2mm; padding: 2mm; text-align: center; }
+          .info-label { font-size: 6pt; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 1mm; font-weight: bold; }
+          .info-valor { font-size: 11pt; font-weight: 900; }
+          .datas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2mm; margin: 2mm 0; }
+          .data-item { border: 2px solid #000; border-radius: 2mm; padding: 2mm; text-align: center; }
+          .data-label { font-size: 6pt; text-transform: uppercase; letter-spacing: .05em; color: #555; margin-bottom: 1mm; font-weight: bold; }
+          .data-valor { font-size: 11pt; font-weight: 900; }
+          .validade-box { border: 3px solid #000; border-radius: 2mm; padding: 3mm; text-align: center; margin: 2mm 0; background: #f0f0f0; }
+          .validade-label { font-size: 7pt; text-transform: uppercase; letter-spacing: .05em; font-weight: bold; margin-bottom: 1mm; }
+          .validade-valor { font-size: 18pt; font-weight: 900; letter-spacing: .05em; }
+          .dias-info { font-size: 7pt; color: #555; margin-top: 1mm; }
+          .rodape { text-align: center; font-size: 6pt; color: #777; border-top: 1px solid #ccc; padding-top: 2mm; }
           @media print { body { margin: 0; padding: 0; } }
           @page { size: 100mm 150mm; margin: 0; }
         </style>
@@ -76,17 +81,35 @@ export default function EtiquetasPage() {
             <div class="topo">
               <div class="empresa">EstoqueApp</div>
             </div>
+
             <div class="produto-nome">${produtoSelecionado?.nome}</div>
+
+            <div class="info-grid">
+              <div class="info-item">
+                <div class="info-label">Quantidade</div>
+                <div class="info-valor">${quantidade || '-'}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Unidade</div>
+                <div class="info-valor">${produtoSelecionado?.unidade || '-'}</div>
+              </div>
+              <div class="info-item">
+                <div class="info-label">Validade</div>
+                <div class="info-valor">${produtoSelecionado?.dias_validade ? produtoSelecionado.dias_validade + 'd' : '-'}</div>
+              </div>
+            </div>
+
             <div class="datas-grid">
               <div class="data-item">
                 <div class="data-label">Fabricacao</div>
                 <div class="data-valor">${dataFabricacaoFormatada}</div>
               </div>
               <div class="data-item">
-                <div class="data-label">Validade</div>
+                <div class="data-label">Vence em</div>
                 <div class="data-valor">${dataValidadeFormatada}</div>
               </div>
             </div>
+
             ${dataValidade ? `
             <div class="validade-box">
               <div class="validade-label">Consumir ate</div>
@@ -94,6 +117,7 @@ export default function EtiquetasPage() {
               <div class="dias-info">${produtoSelecionado?.dias_validade} dias apos fabricacao</div>
             </div>
             ` : ''}
+
             <div class="rodape">Gerado em ${new Date().toLocaleString('pt-BR')}</div>
           </div>
         `).join('')}
@@ -121,6 +145,10 @@ export default function EtiquetasPage() {
                 <option value="">Selecione o produto...</option>
                 {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} {p.dias_validade ? '(' + p.dias_validade + ' dias)' : ''}</option>)}
               </select>
+            </div>
+            <div className="field">
+              <label className="label">Quantidade</label>
+              <input className="input" type="number" min="0" step="0.001" placeholder="Ex: 10" value={quantidade} onChange={e => setQuantidade(e.target.value)} />
             </div>
             <div className="field">
               <label className="label">Data de fabricacao</label>
@@ -154,29 +182,43 @@ export default function EtiquetasPage() {
         <div className="card card-pad">
           <h3 style={{ marginBottom: '1rem' }}>Preview</h3>
           {produtoSelecionado ? (
-            <div style={{ border: '2px dashed var(--border-2)', borderRadius: 'var(--radius)', padding: '1.5rem', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '.75rem' }}>
-              <div style={{ textAlign: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '.75rem' }}>
+            <div style={{ border: '2px dashed var(--border-2)', borderRadius: 'var(--radius)', padding: '1.25rem', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+              <div style={{ textAlign: 'center', borderBottom: '1px solid var(--border)', paddingBottom: '.6rem' }}>
                 <div style={{ fontSize: '.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--text-2)' }}>EstoqueApp</div>
               </div>
-              <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.3rem', textTransform: 'uppercase', lineHeight: 1.2 }}>{produtoSelecionado.nome}</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.5rem' }}>
-                <div style={{ border: '2px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '.65rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.2rem', fontWeight: 700 }}>Fabricacao</div>
-                  <div style={{ fontWeight: 900, fontSize: '1rem' }}>{dataFabricacaoFormatada}</div>
+              <div style={{ textAlign: 'center', fontWeight: 900, fontSize: '1.2rem', textTransform: 'uppercase', lineHeight: 1.2 }}>{produtoSelecionado.nome}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '.4rem' }}>
+                <div style={{ border: '1px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.15rem', fontWeight: 700 }}>Qtd</div>
+                  <div style={{ fontWeight: 900, fontSize: '.95rem' }}>{quantidade || '-'}</div>
                 </div>
-                <div style={{ border: '2px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.5rem', textAlign: 'center' }}>
-                  <div style={{ fontSize: '.65rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.2rem', fontWeight: 700 }}>Validade</div>
-                  <div style={{ fontWeight: 900, fontSize: '1rem' }}>{dataValidadeFormatada}</div>
+                <div style={{ border: '1px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.15rem', fontWeight: 700 }}>Unid</div>
+                  <div style={{ fontWeight: 900, fontSize: '.95rem' }}>{produtoSelecionado.unidade}</div>
+                </div>
+                <div style={{ border: '1px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.15rem', fontWeight: 700 }}>Val.</div>
+                  <div style={{ fontWeight: 900, fontSize: '.95rem' }}>{produtoSelecionado.dias_validade ? produtoSelecionado.dias_validade + 'd' : '-'}</div>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
+                <div style={{ border: '2px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.15rem', fontWeight: 700 }}>Fabricacao</div>
+                  <div style={{ fontWeight: 900, fontSize: '.9rem' }}>{dataFabricacaoFormatada}</div>
+                </div>
+                <div style={{ border: '2px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.4rem', textAlign: 'center' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.15rem', fontWeight: 700 }}>Vence em</div>
+                  <div style={{ fontWeight: 900, fontSize: '.9rem' }}>{dataValidadeFormatada}</div>
                 </div>
               </div>
               {dataValidade && (
-                <div style={{ border: '3px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.75rem', textAlign: 'center', background: 'var(--surface)' }}>
-                  <div style={{ fontSize: '.65rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.25rem', fontWeight: 700 }}>Consumir ate</div>
-                  <div style={{ fontWeight: 900, fontSize: '1.4rem', letterSpacing: '.05em' }}>{dataValidadeFormatada}</div>
+                <div style={{ border: '3px solid var(--border-2)', borderRadius: 'var(--radius-s)', padding: '.6rem', textAlign: 'center', background: 'var(--surface)' }}>
+                  <div style={{ fontSize: '.6rem', textTransform: 'uppercase', color: 'var(--text-3)', marginBottom: '.2rem', fontWeight: 700 }}>Consumir ate</div>
+                  <div style={{ fontWeight: 900, fontSize: '1.3rem', letterSpacing: '.05em' }}>{dataValidadeFormatada}</div>
                   <div style={{ fontSize: '.65rem', color: 'var(--text-3)', marginTop: '.2rem' }}>{produtoSelecionado.dias_validade} dias apos fabricacao</div>
                 </div>
               )}
-              <div style={{ textAlign: 'center', fontSize: '.65rem', color: 'var(--text-3)', borderTop: '1px solid var(--border)', paddingTop: '.5rem' }}>
+              <div style={{ textAlign: 'center', fontSize: '.6rem', color: 'var(--text-3)', borderTop: '1px solid var(--border)', paddingTop: '.4rem' }}>
                 {new Date().toLocaleString('pt-BR')}
               </div>
             </div>
