@@ -9,20 +9,21 @@ export default function Sidebar({ open, onClose }) {
   const admin = isAdmin()
 
   const navItems = [
+     { href: '/movimentacoes', label: 'Movimentacoes' },
     { href: '/dashboard', label: 'Painel' },
     { href: '/posicao', label: 'Posicao de Estoque' },
-    { href: '/movimentacoes', label: 'Movimentacoes' },
-    { href: '/transferencias', label: 'Transferencias' },
     { href: '/produtos', label: 'Produtos' },
+    { href: '/transferencias', label: 'Transferencias' }, 
   ]
 
   const adminItems = [
-  { href: '/sugestao', label: 'Sugestao de Compras' },
-    { href: '/vendas', label: 'Vendas' },
-    { href: '/relatorios', label: 'Relatorios' },
+{ href: '/estoques', label: 'Estoques e Centros' },
+    { href: '/etiquetas', label: 'Etiquetas' },
     { href: '/historico', label: 'Historico' },
-    { href: '/estoques', label: 'Estoques e Centros' },
-    { href: '/usuarios', label: 'Usuarios' },
+     { href: '/relatorios', label: 'Relatorios' },
+    { href: '/sugestao', label: 'Sugestao de Compras' },
+   { href: '/usuarios', label: 'Usuarios' },
+    { href: '/vendas', label: 'Vendas' },
   ]
 
   return (
