@@ -19,12 +19,16 @@ export default function ProdutosPage() {
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [busca, setBusca] = useState('')
+  const [filtroCategoria, setFiltroCategoria] = useState('')
   const admin = isAdmin()
 
   async function carregar() {
     setLoading(true)
     try {
-      const [p, c] = await Promise.all([api.get('/produtos?busca=' + busca), api.get('/categorias')])
+      const [p, c] = await Promise.all([
+        api.get('/produtos?busca=' + busca + (filtroCategoria ? '&categoria_id=' + filtroCategoria : '')),
+        api.get('/categorias')
+      ])
       setProdutos(p)
       setCategorias(c)
     } finally { setLoading(false) }
@@ -33,7 +37,7 @@ export default function ProdutosPage() {
   useEffect(() => {
     const t = setTimeout(carregar, 300)
     return () => clearTimeout(t)
-  }, [busca])
+  }, [busca, filtroCategoria])
 
   function abrirNovo() {
     setEditando(null)
@@ -107,14 +111,21 @@ export default function ProdutosPage() {
 
       {aba === 'produtos' && (
         <>
-          <div style={{ marginBottom: '1rem' }}>
-            <input className="input" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 360 }} />
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+            <input className="input" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 280 }} />
+            <select className="select" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)} style={{ maxWidth: 220 }}>
+              <option value="">Todas as categorias</option>
+              {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+            </select>
+            {(busca || filtroCategoria) && (
+              <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroCategoria('') }}>Limpar</button>
+            )}
           </div>
           <div className="card">
             {loading ? (
               <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><div className="spinner" /></div>
             ) : produtos.length === 0 ? (
-              <div className="empty-state card-pad"><p className="text-sm">Nenhum produto cadastrado</p></div>
+              <div className="empty-state card-pad"><p className="text-sm">Nenhum produto encontrado</p></div>
             ) : (
               <div className="table-wrap">
                 <table>
