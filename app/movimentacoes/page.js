@@ -5,6 +5,7 @@ import { api } from '../../lib/api'
 
 const TIPOS = { entrada: 'Entrada', saida: 'Saida', ajuste: 'Ajuste' }
 const BADGE = { entrada: 'badge-green', saida: 'badge-red', ajuste: 'badge-blue' }
+const FINALIDADE_LABEL = { materia_prima: 'Materia-prima', revenda: 'Revenda' }
 
 export default function MovimentacoesPage() {
   const [movs, setMovs] = useState([])
@@ -13,7 +14,8 @@ export default function MovimentacoesPage() {
   const [modal, setModal] = useState(false)
   const [produtos, setProdutos] = useState([])
   const [centros, setCentros] = useState([])
-  const [form, setForm] = useState({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '', data_validade: '' })
+  const [produtoSelecionado, setProdutoSelecionado] = useState(null)
+  const [form, setForm] = useState({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '', data_validade: '', finalidade: '' })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
   const [sucesso, setSucesso] = useState('')
@@ -45,9 +47,16 @@ export default function MovimentacoesPage() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
     setProdutos(p)
     setCentros(c)
-    setForm({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '', data_validade: '' })
+    setProdutoSelecionado(null)
+    setForm({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '', data_validade: '', finalidade: '' })
     setErro('')
     setModal(true)
+  }
+
+  function selecionarProduto(id) {
+    const p = produtos.find(prod => prod.id === id)
+    setProdutoSelecionado(p)
+    setForm(f => ({ ...f, produto_id: id, finalidade: '' }))
   }
 
   async function salvar() {
@@ -59,6 +68,7 @@ export default function MovimentacoesPage() {
         quantidade: Number(form.quantidade),
         custo_unitario: Number(form.custo_unitario) || 0,
         data_validade: form.data_validade || null,
+        finalidade: produtoSelecionado?.tipo === 'ambos' ? form.finalidade : null,
       })
       setSucesso('Movimentacao registrada! Saldo atual: ' + res.saldo_atual)
       setModal(false)
@@ -83,6 +93,9 @@ export default function MovimentacoesPage() {
   }
 
   const totalAlertas = alertas.vencendo.length + alertas.vencidos.length
+
+  const salvarDesabilitado = salvando || !form.produto_id || !form.centro_id || !form.quantidade ||
+    (produtoSelecionado?.tipo === 'ambos' && !form.finalidade)
 
   return (
     <AppLayout title="Movimentacoes">
@@ -132,7 +145,7 @@ export default function MovimentacoesPage() {
           )}
           {alertas.vencendo.length > 0 && (
             <>
-              <div style={{ padding: '.75rem 1.25rem', background: 'var(--amber-s)', borderBottom: '1px solid var(--border)', borderTop: alertas.vencidos.length > 0 ? '1px solid var(--border)' : 'none' }}>
+              <div style={{ padding: '.75rem 1.25rem', background: 'var(--amber-s)', borderBottom: '1px solid var(--border)' }}>
                 <span style={{ fontWeight: 600, color: 'var(--amber)', fontSize: '.8rem' }}>VENCENDO EM 30 DIAS</span>
               </div>
               <div className="table-wrap">
@@ -191,7 +204,7 @@ export default function MovimentacoesPage() {
           <div className="table-wrap">
             <table>
               <thead>
-                <tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Qtd</th><th>Custo Unit.</th><th>Custo Total</th><th>Validade</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr>
+                <tr><th>Produto</th><th>Centro</th><th>Tipo</th><th>Finalidade</th><th>Qtd</th><th>Custo Unit.</th><th>Custo Total</th><th>Validade</th><th>Motivo</th><th>Usuario</th><th>Data</th></tr>
               </thead>
               <tbody>
                 {movs.map(m => {
@@ -201,6 +214,7 @@ export default function MovimentacoesPage() {
                       <td><div style={{ fontWeight: 500 }}>{m.produtos?.nome}</div></td>
                       <td><div>{m.centros?.nome}</div><div className="text-xs text-muted">{m.centros?.estoques?.nome}</div></td>
                       <td><span className={'badge ' + BADGE[m.tipo]}>{TIPOS[m.tipo]}</span></td>
+                      <td className="text-sm">{m.finalidade ? FINALIDADE_LABEL[m.finalidade] : '-'}</td>
                       <td style={{ fontWeight: 600 }}>{m.quantidade} {m.produtos?.unidade}</td>
                       <td className="text-sm">{m.custo_unitario ? 'R$ ' + Number(m.custo_unitario).toFixed(2).replace('.', ',') : '-'}</td>
                       <td className="text-sm font-semibold">{m.custo_total ? 'R$ ' + Number(m.custo_total).toFixed(2).replace('.', ',') : '-'}</td>
@@ -241,11 +255,23 @@ export default function MovimentacoesPage() {
               </div>
               <div className="field">
                 <label className="label">Produto</label>
-                <select className="select" value={form.produto_id} onChange={e => setForm(f => ({ ...f, produto_id: e.target.value }))}>
+                <select className="select" value={form.produto_id} onChange={e => selecionarProduto(e.target.value)}>
                   <option value="">Selecione...</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
+                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} {p.tipo === 'ambos' ? '(Ambos)' : ''}</option>)}
                 </select>
               </div>
+
+              {produtoSelecionado?.tipo === 'ambos' && (
+                <div className="field">
+                  <label className="label">Finalidade *</label>
+                  <select className="select" value={form.finalidade} onChange={e => setForm(f => ({ ...f, finalidade: e.target.value }))}>
+                    <option value="">Selecione a finalidade...</option>
+                    <option value="materia_prima">Materia-prima</option>
+                    <option value="revenda">Revenda</option>
+                  </select>
+                </div>
+              )}
+
               <div className="field">
                 <label className="label">Centro de estoque</label>
                 <select className="select" value={form.centro_id} onChange={e => setForm(f => ({ ...f, centro_id: e.target.value }))}>
@@ -287,7 +313,7 @@ export default function MovimentacoesPage() {
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-              <button className="btn btn-primary" onClick={salvar} disabled={salvando || !form.produto_id || !form.centro_id || !form.quantidade}>
+              <button className="btn btn-primary" onClick={salvar} disabled={salvarDesabilitado}>
                 {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Registrar'}
               </button>
             </div>
