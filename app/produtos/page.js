@@ -9,11 +9,13 @@ const TIPO_BADGE = { materia_prima: 'badge-blue', revenda: 'badge-green', ambos:
 export default function ProdutosPage() {
   const [aba, setAba] = useState('produtos')
   const [produtos, setProdutos] = useState([])
+  const [produtosVenda, setProdutosVenda] = useState([])
   const [categorias, setCategorias] = useState([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [modalCategoria, setModalCategoria] = useState(false)
   const [editando, setEditando] = useState(null)
+  const [tipoModal, setTipoModal] = useState('materia_prima') // qual tipo está criando
   const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
   const [formCat, setFormCat] = useState({ nome: '', descricao: '' })
   const [salvando, setSalvando] = useState(false)
@@ -29,7 +31,10 @@ export default function ProdutosPage() {
         api.get('/produtos?busca=' + busca + (filtroCategoria ? '&categoria_id=' + filtroCategoria : '')),
         api.get('/categorias')
       ])
-      setProdutos(p)
+      // Insumos: materia_prima e ambos
+      setProdutos(p.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
+      // Produtos de venda: revenda e ambos
+      setProdutosVenda(p.filter(x => x.tipo === 'revenda' || x.tipo === 'ambos'))
       setCategorias(c)
     } finally { setLoading(false) }
   }
@@ -39,15 +44,17 @@ export default function ProdutosPage() {
     return () => clearTimeout(t)
   }, [busca, filtroCategoria])
 
-  function abrirNovo() {
+  function abrirNovo(tipo) {
     setEditando(null)
-    setForm({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
+    setTipoModal(tipo)
+    setForm({ nome: '', descricao: '', categoria_id: '', tipo, unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
     setErro('')
     setModal(true)
   }
 
   function abrirEditar(p) {
     setEditando(p)
+    setTipoModal(p.tipo)
     setForm({ nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo, valor_venda: p.valor_venda || '', dias_validade: p.dias_validade || '' })
     setErro('')
     setModal(true)
@@ -89,6 +96,9 @@ export default function ProdutosPage() {
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
 
+  const isVenda = aba === 'venda'
+  const listaAtual = isVenda ? produtosVenda : produtos
+
   return (
     <AppLayout title="Produtos">
       <div className="flex items-center justify-between mb-4">
@@ -98,7 +108,8 @@ export default function ProdutosPage() {
         </div>
         {admin && (
           <div className="flex gap-2">
-            {aba === 'produtos' && <button className="btn btn-primary" onClick={abrirNovo}>+ Novo produto</button>}
+            {aba === 'produtos' && <button className="btn btn-primary" onClick={() => abrirNovo('materia_prima')}>+ Novo produto</button>}
+            {aba === 'venda' && <button className="btn btn-primary" onClick={() => abrirNovo('revenda')}>+ Novo produto de venda</button>}
             {aba === 'categorias' && <button className="btn btn-primary" onClick={() => { setFormCat({ nome: '', descricao: '' }); setErro(''); setModalCategoria(true) }}>+ Nova categoria</button>}
           </div>
         )}
@@ -106,10 +117,11 @@ export default function ProdutosPage() {
 
       <div className="flex gap-2 mb-4">
         <button className={'btn btn-sm ' + (aba === 'produtos' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('produtos')}>Produtos</button>
+        <button className={'btn btn-sm ' + (aba === 'venda' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('venda')}>Produtos de Venda</button>
         <button className={'btn btn-sm ' + (aba === 'categorias' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('categorias')}>Categorias</button>
       </div>
 
-      {aba === 'produtos' && (
+      {(aba === 'produtos' || aba === 'venda') && (
         <>
           <div style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
             <input className="input" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 280 }} />
@@ -124,21 +136,32 @@ export default function ProdutosPage() {
           <div className="card">
             {loading ? (
               <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><div className="spinner" /></div>
-            ) : produtos.length === 0 ? (
+            ) : listaAtual.length === 0 ? (
               <div className="empty-state card-pad"><p className="text-sm">Nenhum produto encontrado</p></div>
             ) : (
               <div className="table-wrap">
                 <table>
-                  <thead><tr><th>Nome</th><th>Categoria</th><th>Tipo</th><th>Unidade</th><th>Min.</th><th>Valor Venda</th><th>Dias Validade</th><th></th></tr></thead>
+                  <thead>
+                    <tr>
+                      <th>Nome</th>
+                      <th>Categoria</th>
+                      <th>Tipo</th>
+                      <th>Unidade</th>
+                      <th>Min.</th>
+                      {isVenda && <th>Valor Venda</th>}
+                      <th>Dias Validade</th>
+                      <th></th>
+                    </tr>
+                  </thead>
                   <tbody>
-                    {produtos.map(p => (
+                    {listaAtual.map(p => (
                       <tr key={p.id}>
                         <td style={{ fontWeight: 500 }}>{p.nome}</td>
                         <td className="text-sm text-muted">{p.categorias?.nome}</td>
                         <td><span className={'badge ' + TIPO_BADGE[p.tipo]}>{TIPO_LABEL[p.tipo]}</span></td>
                         <td className="text-sm">{p.unidade}</td>
                         <td className="text-sm">{p.estoque_minimo}</td>
-                        <td className="text-sm font-semibold">{p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}</td>
+                        {isVenda && <td className="text-sm font-semibold">{p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}</td>}
                         <td className="text-sm">{p.dias_validade ? p.dias_validade + ' dias' : '-'}</td>
                         <td>
                           {admin && (
@@ -187,7 +210,7 @@ export default function ProdutosPage() {
         <div className="overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal">
             <div className="modal-header">
-              <h2>{editando ? 'Editar produto' : 'Novo produto'}</h2>
+              <h2>{editando ? 'Editar produto' : (isVenda ? 'Novo produto de venda' : 'Novo produto')}</h2>
               <button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button>
             </div>
             <div className="modal-body">
@@ -206,9 +229,17 @@ export default function ProdutosPage() {
                 <div className="field">
                   <label className="label">Tipo *</label>
                   <select className="select" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
-                    <option value="materia_prima">Materia-prima</option>
-                    <option value="revenda">Revenda</option>
-                    <option value="ambos">Ambos</option>
+                    {(tipoModal === 'revenda') ? (
+                      <>
+                        <option value="revenda">Revenda</option>
+                        <option value="ambos">Ambos</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="materia_prima">Materia-prima</option>
+                        <option value="ambos">Ambos</option>
+                      </>
+                    )}
                   </select>
                 </div>
               </div>
