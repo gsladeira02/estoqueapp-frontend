@@ -15,6 +15,8 @@ export default function VendasPage() {
   const [sucesso, setSucesso] = useState('')
   const [dataInicio, setDataInicio] = useState('')
   const [dataFim, setDataFim] = useState('')
+  const [ficha, setFicha] = useState([])
+  const [loadingFicha, setLoadingFicha] = useState(false)
 
   async function carregar() {
     setLoading(true)
@@ -35,31 +37,50 @@ export default function VendasPage() {
     setProdutos(p)
     setCentros(c)
     setForm({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '', data_venda: new Date().toISOString().split('T')[0] })
+    setFicha([])
     setErro('')
     setModal(true)
   }
 
-  function selecionarProduto(produto_id) {
+  async function selecionarProduto(produto_id) {
     const produto = produtos.find(p => p.id === produto_id)
     setForm(f => ({ ...f, produto_id, valor_unitario: produto?.valor_venda || '' }))
+    setFicha([])
+    if (!produto_id) return
+    setLoadingFicha(true)
+    try {
+      const data = await api.get('/fichas/' + produto_id)
+      setFicha(data || [])
+    } catch { setFicha([]) } finally { setLoadingFicha(false) }
   }
 
   const valorTotal = Number(form.quantidade || 0) * Number(form.valor_unitario || 0)
+
+  // Calcula preview de baixas com base na quantidade informada
+  const previewBaixas = ficha.map(item => ({
+    ...item,
+    qtdBaixa: (Number(item.quantidade) * Number(form.quantidade || 0)).toFixed(4).replace(/\.?0+$/, '')
+  }))
 
   async function salvar() {
     setErro('')
     setSalvando(true)
     try {
-      await api.post('/vendas', {
+      const resultado = await api.post('/vendas', {
         ...form,
         quantidade: Number(form.quantidade),
         valor_unitario: Number(form.valor_unitario),
         data_venda: form.data_venda || new Date().toISOString().split('T')[0]
       })
-      setSucesso('Venda registrada com sucesso!')
+      const baixas = resultado.baixas_automaticas?.length || 0
+      setSucesso(
+        baixas > 0
+          ? `Venda registrada! ${baixas} insumo(s) baixado(s) automaticamente do estoque.`
+          : 'Venda registrada com sucesso!'
+      )
       setModal(false)
       carregar()
-      setTimeout(() => setSucesso(''), 4000)
+      setTimeout(() => setSucesso(''), 5000)
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
 
@@ -73,7 +94,7 @@ export default function VendasPage() {
   return (
     <AppLayout title="Vendas">
       <div className="flex items-center justify-between mb-4">
-        <div><h1>Vendas</h1><p className="text-muted text-sm mt-1">Registro de vendas de produtos</p></div>
+        <div><h1>Vendas</h1><p className="text-muted text-sm mt-1">Registro de vendas com baixa automática de estoque</p></div>
         <button className="btn btn-primary" onClick={abrirModal}>+ Nova venda</button>
       </div>
 
@@ -135,7 +156,7 @@ export default function VendasPage() {
 
       {modal && (
         <div className="overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
-          <div className="modal">
+          <div className="modal" style={{ maxWidth: 560 }}>
             <div className="modal-header"><h2>Nova Venda</h2><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button></div>
             <div className="modal-body">
               <div className="field">
@@ -174,6 +195,39 @@ export default function VendasPage() {
                 <label className="label">Observacao</label>
                 <input className="input" placeholder="Observacao opcional..." value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} />
               </div>
+
+              {/* Preview da ficha técnica */}
+              {loadingFicha && (
+                <div style={{ padding: '.5rem', textAlign: 'center' }}><div className="spinner" /></div>
+              )}
+              {!loadingFicha && ficha.length > 0 && (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.75rem', marginTop: '.25rem' }}>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '.5rem', display: 'flex', alignItems: 'center', gap: '.4rem' }}>
+                    <span>⚡</span> Baixa automática de insumos
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.25rem' }}>
+                    {previewBaixas.map(item => (
+                      <div key={item.insumo_id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.82rem' }}>
+                        <span style={{ color: 'var(--text-2)' }}>{item.insumos?.nome}</span>
+                        <span style={{ fontWeight: 600, color: 'var(--red, #e53e3e)' }}>
+                          -{item.qtdBaixa} {item.unidade}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {!form.quantidade && (
+                    <div style={{ fontSize: '.73rem', color: 'var(--text-3)', marginTop: '.4rem' }}>
+                      Informe a quantidade para ver o total de baixa
+                    </div>
+                  )}
+                </div>
+              )}
+              {!loadingFicha && form.produto_id && ficha.length === 0 && (
+                <div style={{ fontSize: '.78rem', color: 'var(--text-3)', marginTop: '.25rem' }}>
+                  Este produto não possui ficha técnica. Nenhum insumo será baixado automaticamente.
+                </div>
+              )}
+
               {erro && <div className="alert alert-red text-sm">{erro}</div>}
             </div>
             <div className="modal-footer">
