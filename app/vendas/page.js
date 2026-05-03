@@ -33,7 +33,7 @@ export default function VendasPage() {
   useEffect(() => { carregar() }, [dataInicio, dataFim])
 
   async function abrirModal() {
-    const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
+    const [p, c] = await Promise.all([api.get('/produtos?eh_produto_venda=true'), api.get('/centros')])
     setProdutos(p)
     setCentros(c)
     setForm({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '', data_venda: new Date().toISOString().split('T')[0] })
