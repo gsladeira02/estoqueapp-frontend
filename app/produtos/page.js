@@ -15,8 +15,8 @@ export default function ProdutosPage() {
   const [modal, setModal] = useState(false)
   const [modalCategoria, setModalCategoria] = useState(false)
   const [editando, setEditando] = useState(null)
-  const [tipoModal, setTipoModal] = useState('materia_prima') // qual tipo está criando
-  const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
+  const [tipoModal, setTipoModal] = useState('materia_prima')
+  const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '', unidade_insumo: '', fator_conversao: '' })
   const [formCat, setFormCat] = useState({ nome: '', descricao: '' })
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -31,9 +31,7 @@ export default function ProdutosPage() {
         api.get('/produtos?busca=' + busca + (filtroCategoria ? '&categoria_id=' + filtroCategoria : '')),
         api.get('/categorias')
       ])
-      // Insumos: materia_prima e ambos
       setProdutos(p.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
-      // Produtos de venda: revenda e ambos
       setProdutosVenda(p.filter(x => x.tipo === 'revenda' || x.tipo === 'ambos'))
       setCategorias(c)
     } finally { setLoading(false) }
@@ -47,7 +45,7 @@ export default function ProdutosPage() {
   function abrirNovo(tipo) {
     setEditando(null)
     setTipoModal(tipo)
-    setForm({ nome: '', descricao: '', categoria_id: '', tipo, unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '' })
+    setForm({ nome: '', descricao: '', categoria_id: '', tipo, unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '', unidade_insumo: '', fator_conversao: '' })
     setErro('')
     setModal(true)
   }
@@ -55,7 +53,12 @@ export default function ProdutosPage() {
   function abrirEditar(p) {
     setEditando(p)
     setTipoModal(p.tipo)
-    setForm({ nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id, tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo, valor_venda: p.valor_venda || '', dias_validade: p.dias_validade || '' })
+    setForm({
+      nome: p.nome, descricao: p.descricao || '', categoria_id: p.categoria_id,
+      tipo: p.tipo, unidade: p.unidade, estoque_minimo: p.estoque_minimo,
+      valor_venda: p.valor_venda || '', dias_validade: p.dias_validade || '',
+      unidade_insumo: p.unidade_insumo || '', fator_conversao: p.fator_conversao || ''
+    })
     setErro('')
     setModal(true)
   }
@@ -74,11 +77,18 @@ export default function ProdutosPage() {
     setErro('')
     setSalvando(true)
     try {
+      const payload = {
+        ...form,
+        valor_venda: Number(form.valor_venda) || 0,
+        dias_validade: form.dias_validade ? Number(form.dias_validade) : null,
+        fator_conversao: form.fator_conversao ? Number(form.fator_conversao) : null,
+        unidade_insumo: form.unidade_insumo || null
+      }
       if (editando) {
-        await api.put('/produtos/' + editando.id, { ...form, valor_venda: Number(form.valor_venda) || 0, dias_validade: form.dias_validade ? Number(form.dias_validade) : null })
+        await api.put('/produtos/' + editando.id, payload)
       } else {
         const sku = 'P' + Date.now().toString().slice(-6)
-        await api.post('/produtos', { ...form, sku, estoque_minimo: Number(form.estoque_minimo) || 0, valor_venda: Number(form.valor_venda) || 0, dias_validade: form.dias_validade ? Number(form.dias_validade) : null })
+        await api.post('/produtos', { ...payload, sku, estoque_minimo: Number(form.estoque_minimo) || 0 })
       }
       setModal(false)
       carregar()
@@ -98,6 +108,7 @@ export default function ProdutosPage() {
 
   const isVenda = aba === 'venda'
   const listaAtual = isVenda ? produtosVenda : produtos
+  const isAmbos = form.tipo === 'ambos'
 
   return (
     <AppLayout title="Produtos">
@@ -147,9 +158,9 @@ export default function ProdutosPage() {
                       <th>Categoria</th>
                       <th>Tipo</th>
                       <th>Unidade</th>
+                      <th>Conversao</th>
                       <th>Min.</th>
                       {isVenda && <th>Valor Venda</th>}
-                      <th>Dias Validade</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -160,9 +171,13 @@ export default function ProdutosPage() {
                         <td className="text-sm text-muted">{p.categorias?.nome}</td>
                         <td><span className={'badge ' + TIPO_BADGE[p.tipo]}>{TIPO_LABEL[p.tipo]}</span></td>
                         <td className="text-sm">{p.unidade}</td>
+                        <td className="text-sm text-muted">
+                          {p.fator_conversao && p.unidade_insumo
+                            ? '1 ' + p.unidade + ' = ' + p.fator_conversao + ' ' + p.unidade_insumo
+                            : '-'}
+                        </td>
                         <td className="text-sm">{p.estoque_minimo}</td>
                         {isVenda && <td className="text-sm font-semibold">{p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}</td>}
-                        <td className="text-sm">{p.dias_validade ? p.dias_validade + ' dias' : '-'}</td>
                         <td>
                           {admin && (
                             <div className="flex gap-2">
@@ -210,7 +225,7 @@ export default function ProdutosPage() {
         <div className="overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
           <div className="modal">
             <div className="modal-header">
-              <h2>{editando ? 'Editar produto' : (isVenda ? 'Novo produto de venda' : 'Novo produto')}</h2>
+              <h2>{editando ? 'Editar produto' : (tipoModal === 'revenda' ? 'Novo produto de venda' : 'Novo produto')}</h2>
               <button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button>
             </div>
             <div className="modal-body">
@@ -229,15 +244,15 @@ export default function ProdutosPage() {
                 <div className="field">
                   <label className="label">Tipo *</label>
                   <select className="select" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
-                    {(tipoModal === 'revenda') ? (
+                    {tipoModal === 'revenda' ? (
                       <>
                         <option value="revenda">Revenda</option>
-                        <option value="ambos">Ambos</option>
+                        <option value="ambos">Ambos (venda + insumo)</option>
                       </>
                     ) : (
                       <>
                         <option value="materia_prima">Materia-prima</option>
-                        <option value="ambos">Ambos</option>
+                        <option value="ambos">Ambos (venda + insumo)</option>
                       </>
                     )}
                   </select>
@@ -245,7 +260,7 @@ export default function ProdutosPage() {
               </div>
               <div className="grid-2">
                 <div className="field">
-                  <label className="label">Unidade *</label>
+                  <label className="label">Unidade de venda *</label>
                   <select className="select" value={form.unidade} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))}>
                     <option value="un">un</option>
                     <option value="kg">kg</option>
@@ -262,6 +277,46 @@ export default function ProdutosPage() {
                   <input className="input" type="number" min="0" step="0.001" placeholder="0" value={form.estoque_minimo} onChange={e => setForm(f => ({ ...f, estoque_minimo: e.target.value }))} />
                 </div>
               </div>
+
+              {isAmbos && (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.875rem', marginBottom: '.25rem' }}>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '.6rem' }}>
+                    Conversao como insumo
+                  </div>
+                  <div className="grid-2">
+                    <div className="field" style={{ margin: 0 }}>
+                      <label className="label">Unidade como insumo</label>
+                      <select className="select" value={form.unidade_insumo} onChange={e => setForm(f => ({ ...f, unidade_insumo: e.target.value }))}>
+                        <option value="">Mesma unidade</option>
+                        <option value="ml">ml</option>
+                        <option value="L">L</option>
+                        <option value="g">g</option>
+                        <option value="kg">kg</option>
+                        <option value="un">un</option>
+                        <option value="m">m</option>
+                      </select>
+                    </div>
+                    <div className="field" style={{ margin: 0 }}>
+                      <label className="label">{'Fator: 1 ' + form.unidade + ' = ? ' + (form.unidade_insumo || '...')}</label>
+                      <input
+                        className="input"
+                        type="number"
+                        min="0.001"
+                        step="0.001"
+                        placeholder="Ex: 330"
+                        value={form.fator_conversao}
+                        onChange={e => setForm(f => ({ ...f, fator_conversao: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  {form.fator_conversao && form.unidade_insumo && (
+                    <div style={{ fontSize: '.78rem', color: 'var(--text-2)', marginTop: '.5rem' }}>
+                      {'Ao transferir como insumo: 1 ' + form.unidade + ' -> ' + form.fator_conversao + ' ' + form.unidade_insumo}
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid-2">
                 <div className="field">
                   <label className="label">Valor de venda (R$)</label>
