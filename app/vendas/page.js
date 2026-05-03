@@ -33,8 +33,9 @@ export default function VendasPage() {
   useEffect(() => { carregar() }, [dataInicio, dataFim])
 
   async function abrirModal() {
-    const [p, c] = await Promise.all([api.get('/produtos?eh_produto_venda=true'), api.get('/centros')])
-    setProdutos(p)
+    const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
+    // Mostra produtos de venda (eh_produto_venda=true) E produtos de revenda/ambos
+    setProdutos(p.filter(x => x.eh_produto_venda || x.tipo === 'revenda' || x.tipo === 'ambos'))
     setCentros(c)
     setForm({ produto_id: '', centro_id: '', quantidade: '', valor_unitario: '', observacao: '', data_venda: new Date().toISOString().split('T')[0] })
     setFicha([])
