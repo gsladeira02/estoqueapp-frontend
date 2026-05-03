@@ -18,9 +18,11 @@ export default function EtiquetasPage() {
   const [erro, setErro] = useState('')
 
   useEffect(() => {
-    Promise.all([api.get('/produtos'), api.get('/centros')]).then(([p, c]) => {
-      setProdutos(p)
-      setCentros(c)
+    Promise.all([api.get('/produtos'), api.get('/categorias'), api.get('/centros')]).then(([p, c, centrosData]) => {
+      const catPorcoes = c.find(cat => cat.nome === 'Por\u00e7\u00f5es')
+      const filtrados = catPorcoes ? p.filter(prod => prod.categoria_id === catPorcoes.id) : p
+      setProdutos(filtrados)
+      setCentros(centrosData)
       setLoading(false)
     })
   }, [])
@@ -41,7 +43,6 @@ export default function EtiquetasPage() {
   const dataFabricacaoFormatada = fabricacao ? new Date(fabricacao + 'T00:00:00').toLocaleDateString('pt-BR') : '-'
   const dataValidadeFormatada = dataValidade ? dataValidade.toLocaleDateString('pt-BR') : '-'
   const dataValidadeISO = dataValidade ? dataValidade.toISOString().split('T')[0] : null
-
   const centroSelecionado = centros.find(c => c.id === centroId)
 
   async function imprimirERegistrar() {
@@ -177,7 +178,7 @@ export default function EtiquetasPage() {
     <AppLayout title="Etiquetas">
       <div className="mb-4">
         <h1>Etiquetadora</h1>
-        <p className="text-muted text-sm mt-1">Formato 100x150mm — Elgin L42 Pro</p>
+        <p className="text-muted text-sm mt-1">Formato 100x150mm — Elgin L42 Pro — categoria: Porcoes</p>
       </div>
 
       {sucesso && <div className="alert alert-green mb-4">{sucesso}</div>}
@@ -194,7 +195,6 @@ export default function EtiquetasPage() {
                 {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} {p.dias_validade ? '(' + p.dias_validade + ' dias)' : ''}</option>)}
               </select>
             </div>
-
             <div className="field">
               <label className="label">Local de fabricacao *</label>
               <select className="select" value={centroId} onChange={e => setCentroId(e.target.value)}>
@@ -202,17 +202,14 @@ export default function EtiquetasPage() {
                 {centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
               </select>
             </div>
-
             <div className="field">
               <label className="label">Quantidade *</label>
               <input className="input" type="number" min="0" step="0.001" placeholder="Ex: 10" value={quantidade} onChange={e => setQuantidade(e.target.value)} />
             </div>
-
             <div className="field">
               <label className="label">Data de fabricacao</label>
               <input className="input" type="date" value={fabricacao} onChange={e => setFabricacao(e.target.value)} />
             </div>
-
             {produtoSelecionado?.dias_validade && (
               <div className="alert alert-green" style={{ fontSize: '.8rem' }}>
                 Validade calculada automaticamente: <strong>{dataValidadeFormatada}</strong> ({produtoSelecionado.dias_validade} dias)
@@ -223,19 +220,16 @@ export default function EtiquetasPage() {
                 Este produto nao tem dias de validade configurado. Configure em Produtos → Editar.
               </div>
             )}
-
             <div className="field">
               <label className="label">Numero de copias</label>
               <input className="input" type="number" min="1" max="100" placeholder="1" value={copias} onChange={e => setCopias(e.target.value)} />
             </div>
-
             <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem', padding: '.75rem', background: 'var(--bg)', borderRadius: 'var(--radius-s)', border: '1px solid var(--border)' }}>
               <input type="checkbox" id="registrarEntrada" checked={registrarEntrada} onChange={e => setRegistrarEntrada(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
               <label htmlFor="registrarEntrada" style={{ fontSize: '.875rem', cursor: 'pointer', fontWeight: 500 }}>
                 Registrar entrada no estoque automaticamente
               </label>
             </div>
-
             <button
               className="btn btn-primary w-full"
               style={{ justifyContent: 'center', marginTop: '.25rem' }}
