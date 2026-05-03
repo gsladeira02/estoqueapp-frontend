@@ -25,14 +25,18 @@ export default function VendasPage() {
   const [filtroCentro, setFiltroCentro] = useState('')
 
   async function carregarOpcoes() {
-    const [p, c, cats] = await Promise.all([
+    const [p, c, catsVenda, catsNormal] = await Promise.all([
       api.get('/produtos'),
       api.get('/centros'),
-      api.get('/categorias-venda')
+      api.get('/categorias-venda'),
+      api.get('/categorias')
     ])
     setProdutos(p.filter(x => x.eh_produto_venda || x.tipo === 'revenda' || x.tipo === 'ambos'))
     setCentros(c)
-    setCategorias(cats)
+    setCategorias([
+      ...catsVenda.map(c => ({ ...c, _origem: 'venda' })),
+      ...catsNormal.map(c => ({ ...c, _origem: 'normal' }))
+    ])
   }
 
   async function carregar() {
@@ -97,17 +101,18 @@ export default function VendasPage() {
   }
 
   async function remover(id) {
-    if (!confirm('Remover esta venda? Os insumos serão estornados automaticamente.')) return
+    if (!confirm('Remover esta venda? Os insumos serao estornados automaticamente.')) return
     try { await api.delete('/vendas/' + id); carregar() } catch (e) { alert(e.message) }
   }
 
-  // Filtros aplicados no frontend
   const vendasFiltradas = vendas.filter(v => {
     if (filtroProduto && v.produtos?.id !== filtroProduto) return false
     if (filtroCentro && v.centros?.id !== filtroCentro) return false
     if (filtroCategoria) {
       const produto = produtos.find(p => p.id === v.produtos?.id)
-      if (produto?.categoria_venda_id !== filtroCategoria) return false
+      const cat = categorias.find(c => c.id === filtroCategoria)
+      if (cat?._origem === 'venda' && produto?.categoria_venda_id !== filtroCategoria) return false
+      if (cat?._origem === 'normal' && produto?.categoria_id !== filtroCategoria) return false
     }
     return true
   })
@@ -145,7 +150,7 @@ export default function VendasPage() {
           </div>
           <div className="field">
             <label className="label">Categoria</label>
-            <select className="select" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}>
+            <select className="select" value={filtroCategoria} onChange={e => { setFiltroCategoria(e.target.value); setFiltroProduto('') }}>
               <option value="">Todas</option>
               {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
             </select>
@@ -155,7 +160,13 @@ export default function VendasPage() {
             <select className="select" value={filtroProduto} onChange={e => setFiltroProduto(e.target.value)}>
               <option value="">Todos</option>
               {produtos
-                .filter(p => !filtroCategoria || p.categoria_venda_id === filtroCategoria)
+                .filter(p => {
+                  if (!filtroCategoria) return true
+                  const cat = categorias.find(c => c.id === filtroCategoria)
+                  if (cat?._origem === 'venda') return p.categoria_venda_id === filtroCategoria
+                  if (cat?._origem === 'normal') return p.categoria_id === filtroCategoria
+                  return true
+                })
                 .map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
             </select>
           </div>
@@ -263,7 +274,6 @@ export default function VendasPage() {
                 <label className="label">Observacao</label>
                 <input className="input" placeholder="Observacao opcional..." value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} />
               </div>
-
               {loadingFicha && <div style={{ textAlign: 'center' }}><div className="spinner" /></div>}
               {!loadingFicha && ficha.length > 0 && (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.75rem' }}>
