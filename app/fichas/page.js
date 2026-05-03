@@ -32,8 +32,14 @@ export default function FichasTecnicasPage() {
   async function carregar() {
     setLoading(true)
     try {
-      const [todos, cats] = await Promise.all([api.get('/produtos'), api.get('/categorias')])
-      setProdutosVenda(todos.filter(x => x.tipo === 'revenda' || x.tipo === 'ambos'))
+      const [vendas, todos, cats] = await Promise.all([
+        api.get('/produtos?eh_produto_venda=true'),
+        api.get('/produtos'),
+        api.get('/categorias')
+      ])
+      // Lista da esquerda: só produtos marcados como produto de venda
+      setProdutosVenda(vendas)
+      // Insumos: materia_prima ou ambos
       setInsumos(todos.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
       setCategorias(cats)
     } finally { setLoading(false) }
@@ -68,7 +74,7 @@ export default function FichasTecnicasPage() {
     setFicha(f => [...f, {
       insumo_id: novoItem.insumo_id,
       quantidade: Number(novoItem.quantidade),
-      unidade: novoItem.unidade || insumo?.unidade || 'un',
+      unidade: novoItem.unidade || insumo?.unidade_insumo || insumo?.unidade || 'un',
       insumos: insumo
     }])
     setNovoItem({ insumo_id: '', quantidade: '', unidade: 'un' })
@@ -127,6 +133,7 @@ export default function FichasTecnicasPage() {
     try {
       const payload = {
         ...form,
+        eh_produto_venda: true,
         valor_venda: Number(form.valor_venda) || 0,
         estoque_minimo: Number(form.estoque_minimo) || 0,
         dias_validade: form.dias_validade ? Number(form.dias_validade) : null,
