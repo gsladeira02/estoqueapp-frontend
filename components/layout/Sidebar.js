@@ -18,6 +18,7 @@ export default function Sidebar({ open, onClose }) {
 
   const adminItems = [
     { href: '/vendas', label: 'Vendas' },
+    { href: '/fichas', label: 'Fichas Tecnicas' },
     { href: '/relatorios', label: 'Relatorios' },
     { href: '/historico', label: 'Historico' },
     { href: '/sugestao', label: 'Sugestao de Compras' },
