@@ -61,6 +61,14 @@ export default function UsuariosPage() {
     carregar()
   }
 
+  async function apagar(u) {
+    if (!confirm(`Apagar permanentemente o usuario ${u.nome}? Esta acao nao pode ser desfeita.`)) return
+    try {
+      await api.delete(`/usuarios/${u.id}`)
+      carregar()
+    } catch (e) { alert(e.message) }
+  }
+
   function toggleCentro(id) {
     setForm(f => ({
       ...f,
@@ -105,6 +113,7 @@ export default function UsuariosPage() {
                         <button className={`btn btn-sm ${u.ativo ? 'btn-danger' : 'btn-secondary'}`} onClick={() => toggleAtivo(u)}>
                           {u.ativo ? 'Desativar' : 'Ativar'}
                         </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => apagar(u)}>Apagar</button>
                       </div>
                     </td>
                   </tr>
