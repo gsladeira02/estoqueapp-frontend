@@ -31,7 +31,7 @@ export default function ProdutosPage() {
         api.get('/produtos?busca=' + busca + (filtroCategoria ? '&categoria_id=' + filtroCategoria : '')),
         api.get('/categorias')
       ])
-      setProdutos(p.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
+      setProdutos(p.filter(x => x.tipo === 'materia_prima'))
       setProdutosVenda(p.filter(x => x.tipo === 'revenda' || x.tipo === 'ambos'))
       setCategorias(c)
     } finally { setLoading(false) }
@@ -244,23 +244,15 @@ export default function ProdutosPage() {
                 <div className="field">
                   <label className="label">Tipo *</label>
                   <select className="select" value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))}>
-                    {tipoModal === 'revenda' ? (
-                      <>
-                        <option value="revenda">Revenda</option>
-                        <option value="ambos">Ambos (venda + insumo)</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="materia_prima">Materia-prima</option>
-                        <option value="ambos">Ambos (venda + insumo)</option>
-                      </>
-                    )}
+                    <option value="materia_prima">Materia-prima</option>
+                    <option value="revenda">Revenda</option>
+                    <option value="ambos">Ambos (venda + insumo)</option>
                   </select>
                 </div>
               </div>
               <div className="grid-2">
                 <div className="field">
-                  <label className="label">Unidade de venda *</label>
+                  <label className="label">Unidade *</label>
                   <select className="select" value={form.unidade} onChange={e => setForm(f => ({ ...f, unidade: e.target.value }))}>
                     <option value="un">un</option>
                     <option value="kg">kg</option>
