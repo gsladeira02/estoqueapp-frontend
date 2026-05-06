@@ -108,7 +108,7 @@ export default function ProdutosPage() {
 
   const isVenda = aba === 'venda'
   const listaAtual = isVenda ? produtosVenda : produtos
-  const isAmbos = form.tipo === 'ambos'
+  const mostrarConversao = form.tipo === 'ambos' || form.tipo === 'materia_prima'
 
   return (
     <AppLayout title="Produtos">
@@ -270,16 +270,16 @@ export default function ProdutosPage() {
                 </div>
               </div>
 
-              {isAmbos && (
+              {mostrarConversao && (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.875rem', marginBottom: '.25rem' }}>
                   <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '.6rem' }}>
-                    Conversao como insumo
+                    Conversao de unidade na entrada
                   </div>
                   <div className="grid-2">
                     <div className="field" style={{ margin: 0 }}>
-                      <label className="label">Unidade como insumo</label>
+                      <label className="label">Unidade no estoque</label>
                       <select className="select" value={form.unidade_insumo} onChange={e => setForm(f => ({ ...f, unidade_insumo: e.target.value }))}>
-                        <option value="">Mesma unidade</option>
+                        <option value="">Sem conversao</option>
                         <option value="ml">ml</option>
                         <option value="L">L</option>
                         <option value="g">g</option>
@@ -295,7 +295,7 @@ export default function ProdutosPage() {
                         type="number"
                         min="0.001"
                         step="0.001"
-                        placeholder="Ex: 330"
+                        placeholder="Ex: 600"
                         value={form.fator_conversao}
                         onChange={e => setForm(f => ({ ...f, fator_conversao: e.target.value }))}
                       />
@@ -303,7 +303,7 @@ export default function ProdutosPage() {
                   </div>
                   {form.fator_conversao && form.unidade_insumo && (
                     <div style={{ fontSize: '.78rem', color: 'var(--text-2)', marginTop: '.5rem' }}>
-                      {'Ao transferir como insumo: 1 ' + form.unidade + ' -> ' + form.fator_conversao + ' ' + form.unidade_insumo}
+                      {'Ao dar entrada de 1 ' + form.unidade + ' → ' + form.fator_conversao + ' ' + form.unidade_insumo + ' no estoque'}
                     </div>
                   )}
                 </div>
