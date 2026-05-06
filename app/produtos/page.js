@@ -14,6 +14,7 @@ export default function ProdutosPage() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState(false)
   const [modalCategoria, setModalCategoria] = useState(false)
+  const [modalEmMassa, setModalEmMassa] = useState(false)
   const [editando, setEditando] = useState(null)
   const [tipoModal, setTipoModal] = useState('materia_prima')
   const [form, setForm] = useState({ nome: '', descricao: '', categoria_id: '', tipo: 'materia_prima', unidade: 'un', estoque_minimo: '', valor_venda: '', dias_validade: '', unidade_insumo: '', fator_conversao: '' })
@@ -23,6 +24,14 @@ export default function ProdutosPage() {
   const [busca, setBusca] = useState('')
   const [filtroCategoria, setFiltroCategoria] = useState('')
   const admin = isAdmin()
+
+  // Edição em massa
+  const [selecionados, setSelecionados] = useState([])
+  const [campomMassa, setCampoMassa] = useState('dias_validade')
+  const [valorMassa, setValorMassa] = useState('')
+  const [salvandoMassa, setSalvandoMassa] = useState(false)
+  const [sucessoMassa, setSucessoMassa] = useState('')
+  const [erroMassa, setErroMassa] = useState('')
 
   async function carregar() {
     setLoading(true)
@@ -106,9 +115,51 @@ export default function ProdutosPage() {
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
   }
 
+  // Edição em massa
+  function toggleSelecionado(id) {
+    setSelecionados(s => s.includes(id) ? s.filter(x => x !== id) : [...s, id])
+  }
+
+  function toggleTodos() {
+    if (selecionados.length === listaAtual.length) {
+      setSelecionados([])
+    } else {
+      setSelecionados(listaAtual.map(p => p.id))
+    }
+  }
+
+  async function salvarEmMassa() {
+    if (!valorMassa && valorMassa !== '0') { setErroMassa('Informe o valor'); return }
+    if (selecionados.length === 0) { setErroMassa('Selecione ao menos um produto'); return }
+    setErroMassa('')
+    setSalvandoMassa(true)
+    try {
+      const payload = {}
+      if (campomMassa === 'dias_validade') payload.dias_validade = valorMassa ? Number(valorMassa) : null
+      if (campomMassa === 'estoque_minimo') payload.estoque_minimo = Number(valorMassa) || 0
+      if (campomMassa === 'categoria_id') payload.categoria_id = valorMassa
+      if (campomMassa === 'unidade') payload.unidade = valorMassa
+
+      await Promise.all(selecionados.map(id => api.put('/produtos/' + id, payload)))
+      setSucessoMassa(selecionados.length + ' produto(s) atualizados com sucesso!')
+      setSelecionados([])
+      setValorMassa('')
+      carregar()
+      setTimeout(() => setSucessoMassa(''), 4000)
+    } catch (e) { setErroMassa(e.message) } finally { setSalvandoMassa(false) }
+  }
+
   const isVenda = aba === 'venda'
   const listaAtual = isVenda ? produtosVenda : produtos
   const mostrarConversao = form.tipo === 'ambos' || form.tipo === 'materia_prima'
+  const todosSelecionados = listaAtual.length > 0 && selecionados.length === listaAtual.length
+
+  const CAMPOS_MASSA = [
+    { value: 'dias_validade', label: 'Dias de validade' },
+    { value: 'estoque_minimo', label: 'Estoque minimo' },
+    { value: 'categoria_id', label: 'Categoria' },
+    { value: 'unidade', label: 'Unidade' },
+  ]
 
   return (
     <AppLayout title="Produtos">
@@ -127,14 +178,14 @@ export default function ProdutosPage() {
       </div>
 
       <div className="flex gap-2 mb-4">
-        <button className={'btn btn-sm ' + (aba === 'produtos' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('produtos')}>Produtos</button>
-        <button className={'btn btn-sm ' + (aba === 'venda' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('venda')}>Produtos de Venda</button>
-        <button className={'btn btn-sm ' + (aba === 'categorias' ? 'btn-primary' : 'btn-secondary')} onClick={() => setAba('categorias')}>Categorias</button>
+        <button className={'btn btn-sm ' + (aba === 'produtos' ? 'btn-primary' : 'btn-secondary')} onClick={() => { setAba('produtos'); setSelecionados([]) }}>Produtos</button>
+        <button className={'btn btn-sm ' + (aba === 'venda' ? 'btn-primary' : 'btn-secondary')} onClick={() => { setAba('venda'); setSelecionados([]) }}>Produtos de Venda</button>
+        <button className={'btn btn-sm ' + (aba === 'categorias' ? 'btn-primary' : 'btn-secondary')} onClick={() => { setAba('categorias'); setSelecionados([]) }}>Categorias</button>
       </div>
 
       {(aba === 'produtos' || aba === 'venda') && (
         <>
-          <div style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap' }}>
+          <div style={{ marginBottom: '1rem', display: 'flex', gap: '.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <input className="input" placeholder="Buscar por nome..." value={busca} onChange={e => setBusca(e.target.value)} style={{ maxWidth: 280 }} />
             <select className="select" value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)} style={{ maxWidth: 220 }}>
               <option value="">Todas as categorias</option>
@@ -143,7 +194,18 @@ export default function ProdutosPage() {
             {(busca || filtroCategoria) && (
               <button className="btn btn-ghost btn-sm" onClick={() => { setBusca(''); setFiltroCategoria('') }}>Limpar</button>
             )}
+            {admin && selecionados.length > 0 && (
+              <button className="btn btn-secondary btn-sm" onClick={() => { setModalEmMassa(true); setErroMassa(''); setSucessoMassa(''); setValorMassa('') }}>
+                Editar {selecionados.length} selecionado(s)
+              </button>
+            )}
+            {admin && selecionados.length > 0 && (
+              <button className="btn btn-ghost btn-sm" onClick={() => setSelecionados([])}>Desmarcar todos</button>
+            )}
           </div>
+
+          {sucessoMassa && <div className="alert alert-green mb-3 text-sm">{sucessoMassa}</div>}
+
           <div className="card">
             {loading ? (
               <div style={{ padding: '2rem', display: 'flex', justifyContent: 'center' }}><div className="spinner" /></div>
@@ -154,19 +216,30 @@ export default function ProdutosPage() {
                 <table>
                   <thead>
                     <tr>
+                      {admin && (
+                        <th style={{ width: 36 }}>
+                          <input type="checkbox" checked={todosSelecionados} onChange={toggleTodos} style={{ cursor: 'pointer' }} />
+                        </th>
+                      )}
                       <th>Nome</th>
                       <th>Categoria</th>
                       <th>Tipo</th>
                       <th>Unidade</th>
                       <th>Conversao</th>
                       <th>Min.</th>
+                      <th>Validade</th>
                       {isVenda && <th>Valor Venda</th>}
                       <th></th>
                     </tr>
                   </thead>
                   <tbody>
                     {listaAtual.map(p => (
-                      <tr key={p.id}>
+                      <tr key={p.id} style={{ background: selecionados.includes(p.id) ? 'var(--accent-s)' : undefined }}>
+                        {admin && (
+                          <td>
+                            <input type="checkbox" checked={selecionados.includes(p.id)} onChange={() => toggleSelecionado(p.id)} style={{ cursor: 'pointer' }} />
+                          </td>
+                        )}
                         <td style={{ fontWeight: 500 }}>{p.nome}</td>
                         <td className="text-sm text-muted">{p.categorias?.nome}</td>
                         <td><span className={'badge ' + TIPO_BADGE[p.tipo]}>{TIPO_LABEL[p.tipo]}</span></td>
@@ -177,6 +250,7 @@ export default function ProdutosPage() {
                             : '-'}
                         </td>
                         <td className="text-sm">{p.estoque_minimo}</td>
+                        <td className="text-sm">{p.dias_validade ? p.dias_validade + ' dias' : '-'}</td>
                         {isVenda && <td className="text-sm font-semibold">{p.valor_venda ? 'R$ ' + Number(p.valor_venda).toFixed(2).replace('.', ',') : '-'}</td>}
                         <td>
                           {admin && (
@@ -218,6 +292,60 @@ export default function ProdutosPage() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Modal edição em massa */}
+      {modalEmMassa && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setModalEmMassa(false)}>
+          <div className="modal">
+            <div className="modal-header">
+              <h2>Editar {selecionados.length} produto(s)</h2>
+              <button className="btn btn-ghost btn-icon" onClick={() => setModalEmMassa(false)}>x</button>
+            </div>
+            <div className="modal-body">
+              <div className="field">
+                <label className="label">Campo a editar</label>
+                <select className="select" value={campomMassa} onChange={e => { setCampoMassa(e.target.value); setValorMassa('') }}>
+                  {CAMPOS_MASSA.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label className="label">Novo valor</label>
+                {campomMassa === 'categoria_id' ? (
+                  <select className="select" value={valorMassa} onChange={e => setValorMassa(e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {categorias.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  </select>
+                ) : campomMassa === 'unidade' ? (
+                  <select className="select" value={valorMassa} onChange={e => setValorMassa(e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {['un','kg','g','L','ml','m','cx','pc'].map(u => <option key={u} value={u}>{u}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    step="1"
+                    placeholder={campomMassa === 'dias_validade' ? 'Ex: 7' : 'Ex: 10'}
+                    value={valorMassa}
+                    onChange={e => setValorMassa(e.target.value)}
+                  />
+                )}
+              </div>
+              <div style={{ background: 'var(--bg)', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', color: 'var(--text-2)' }}>
+                Isso vai alterar <strong>{selecionados.length} produto(s)</strong> de uma vez. Esta acao nao pode ser desfeita.
+              </div>
+              {erroMassa && <div className="alert alert-red text-sm">{erroMassa}</div>}
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-secondary" onClick={() => setModalEmMassa(false)}>Cancelar</button>
+              <button className="btn btn-primary" onClick={async () => { await salvarEmMassa(); if (!erroMassa) setModalEmMassa(false) }} disabled={salvandoMassa || !valorMassa}>
+                {salvandoMassa ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Aplicar a todos'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
