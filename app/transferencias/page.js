@@ -43,7 +43,7 @@ export default function TransferenciasPage() {
 
   async function abrirModal() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
-    setProdutos(p)
+    setProdutos(p.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
     setCentros(c)
     setCentroOrigemId('')
     setCentroDestinoId('')
@@ -227,8 +227,6 @@ export default function TransferenciasPage() {
           <div className="modal" style={{ maxWidth: 620 }}>
             <div className="modal-header"><h2>Solicitar Transferencia</h2><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button></div>
             <div className="modal-body">
-
-              {/* Origem e destino */}
               <div className="grid-2">
                 <div className="field">
                   <label className="label">Centro de origem *</label>
@@ -246,7 +244,6 @@ export default function TransferenciasPage() {
                 </div>
               </div>
 
-              {/* Lista de itens adicionados */}
               {itens.length > 0 && (
                 <div style={{ marginBottom: '1rem' }}>
                   <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.5rem', textTransform: 'uppercase', letterSpacing: '.04em' }}>
@@ -272,7 +269,6 @@ export default function TransferenciasPage() {
                 </div>
               )}
 
-              {/* Adicionar produto */}
               <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '1rem', border: '1px dashed var(--border)', marginBottom: '.75rem' }}>
                 <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.75rem' }}>+ Adicionar produto</div>
                 <div className="field" style={{ margin: '0 0 .5rem' }}>
@@ -294,6 +290,14 @@ export default function TransferenciasPage() {
                           : '')}
                       </option>
                     </select>
+                  </div>
+                )}
+                {produtoNovoItem?.fator_conversao && produtoNovoItem?.unidade_insumo && (
+                  <div style={{ fontSize: '.78rem', color: 'var(--text-2)', marginBottom: '.5rem' }}>
+                    Conversao: 1 {produtoNovoItem.unidade} → {produtoNovoItem.fator_conversao} {produtoNovoItem.unidade_insumo}
+                    {novoItem.quantidade && <span style={{ fontWeight: 600, color: 'var(--accent)', marginLeft: '.4rem' }}>
+                      ({novoItem.quantidade} → {Number(novoItem.quantidade) * Number(produtoNovoItem.fator_conversao)} {produtoNovoItem.unidade_insumo})
+                    </span>}
                   </div>
                 )}
                 <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-end' }}>
