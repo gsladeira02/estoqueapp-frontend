@@ -45,7 +45,7 @@ export default function MovimentacoesPage() {
 
   async function abrirModal() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
-    setProdutos(p)
+    setProdutos(p.filter(x => x.tipo === 'materia_prima' || x.tipo === 'ambos'))
     setCentros(c)
     setProdutoSelecionado(null)
     setForm({ produto_id: '', centro_id: '', tipo: 'entrada', quantidade: '', motivo: '', documento: '', custo_unitario: '', data_validade: '', finalidade: '' })
@@ -93,7 +93,6 @@ export default function MovimentacoesPage() {
   }
 
   const totalAlertas = alertas.vencendo.length + alertas.vencidos.length
-
   const salvarDesabilitado = salvando || !form.produto_id || !form.centro_id || !form.quantidade ||
     (produtoSelecionado?.tipo === 'ambos' && !form.finalidade)
 
@@ -269,6 +268,15 @@ export default function MovimentacoesPage() {
                     <option value="materia_prima">Materia-prima</option>
                     <option value="revenda">Revenda</option>
                   </select>
+                </div>
+              )}
+
+              {produtoSelecionado?.fator_conversao && produtoSelecionado?.unidade_insumo && form.tipo === 'entrada' && (
+                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.75rem', fontSize: '.82rem', color: 'var(--text-2)' }}>
+                  Conversao: 1 {produtoSelecionado.unidade} → {produtoSelecionado.fator_conversao} {produtoSelecionado.unidade_insumo} no estoque
+                  {form.quantidade && <span style={{ marginLeft: '.5rem', fontWeight: 600, color: 'var(--accent)' }}>
+                    ({form.quantidade} {produtoSelecionado.unidade} → {Number(form.quantidade) * Number(produtoSelecionado.fator_conversao)} {produtoSelecionado.unidade_insumo})
+                  </span>}
                 </div>
               )}
 
