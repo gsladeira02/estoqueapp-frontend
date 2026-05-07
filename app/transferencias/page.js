@@ -13,8 +13,11 @@ export default function TransferenciasPage() {
   const [modalAprovar, setModalAprovar] = useState(null)
   const [produtos, setProdutos] = useState([])
   const [centros, setCentros] = useState([])
-  const [form, setForm] = useState({ produto_id: '', centro_origem_id: '', centro_destino_id: '', quantidade: '', observacao: '', finalidade: '' })
-  const [produtoSelecionado, setProdutoSelecionado] = useState(null)
+  const [centroOrigemId, setCentroOrigemId] = useState('')
+  const [centroDestinoId, setCentroDestinoId] = useState('')
+  const [observacao, setObservacao] = useState('')
+  const [itens, setItens] = useState([])
+  const [novoItem, setNovoItem] = useState({ produto_id: '', quantidade: '', finalidade: '' })
   const [motivoRejeicao, setMotivoRejeicao] = useState('')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState('')
@@ -42,38 +45,67 @@ export default function TransferenciasPage() {
     const [p, c] = await Promise.all([api.get('/produtos'), api.get('/centros')])
     setProdutos(p)
     setCentros(c)
-    setForm({ produto_id: '', centro_origem_id: '', centro_destino_id: '', quantidade: '', observacao: '', finalidade: '' })
-    setProdutoSelecionado(null)
+    setCentroOrigemId('')
+    setCentroDestinoId('')
+    setObservacao('')
+    setItens([])
+    setNovoItem({ produto_id: '', quantidade: '', finalidade: '' })
     setErro('')
     setModal(true)
   }
 
-  function selecionarProduto(produto_id) {
-    const p = produtos.find(x => x.id === produto_id)
-    setProdutoSelecionado(p || null)
-    setForm(f => ({ ...f, produto_id, finalidade: '' }))
+  function getProduto(id) {
+    return produtos.find(p => p.id === id)
   }
 
-  const temConversao = produtoSelecionado?.tipo === 'ambos' &&
-    form.finalidade === 'materia_prima' &&
-    produtoSelecionado?.fator_conversao &&
-    produtoSelecionado?.unidade_insumo
+  function adicionarItem() {
+    if (!novoItem.produto_id || !novoItem.quantidade || Number(novoItem.quantidade) <= 0) {
+      setErro('Selecione um produto e informe a quantidade')
+      return
+    }
+    const prod = getProduto(novoItem.produto_id)
+    if (prod?.tipo === 'ambos' && !novoItem.finalidade) {
+      setErro('Selecione a finalidade para este produto')
+      return
+    }
+    if (itens.find(i => i.produto_id === novoItem.produto_id)) {
+      setErro('Este produto ja foi adicionado')
+      return
+    }
+    setItens(its => [...its, { ...novoItem, quantidade: Number(novoItem.quantidade), produto: prod }])
+    setNovoItem({ produto_id: '', quantidade: '', finalidade: '' })
+    setErro('')
+  }
 
-  const qtdDestino = temConversao
-    ? (Number(form.quantidade || 0) * Number(produtoSelecionado.fator_conversao)).toFixed(3).replace(/\.?0+$/, '')
-    : form.quantidade
+  function removerItem(produto_id) {
+    setItens(its => its.filter(i => i.produto_id !== produto_id))
+  }
 
-  const unidadeDestino = temConversao ? produtoSelecionado.unidade_insumo : produtoSelecionado?.unidade
+  function getPreviewConversao(item) {
+    const prod = item.produto
+    if (item.finalidade === 'materia_prima' && prod?.fator_conversao && prod?.unidade_insumo) {
+      return (item.quantidade * Number(prod.fator_conversao)).toFixed(3).replace(/\.?0+$/, '') + ' ' + prod.unidade_insumo
+    }
+    return item.quantidade + ' ' + prod?.unidade
+  }
 
   async function solicitar() {
     setErro('')
+    if (!centroOrigemId || !centroDestinoId) { setErro('Selecione origem e destino'); return }
+    if (centroOrigemId === centroDestinoId) { setErro('Origem e destino devem ser diferentes'); return }
+    if (itens.length === 0) { setErro('Adicione ao menos um produto'); return }
     setSalvando(true)
     try {
-      await api.post('/transferencias', {
-        ...form,
-        quantidade: Number(form.quantidade),
-        finalidade: form.finalidade || undefined
-      })
+      await Promise.all(itens.map(item =>
+        api.post('/transferencias', {
+          produto_id: item.produto_id,
+          centro_origem_id: centroOrigemId,
+          centro_destino_id: centroDestinoId,
+          quantidade: item.quantidade,
+          finalidade: item.finalidade || undefined,
+          observacao
+        })
+      ))
       setModal(false)
       carregar()
     } catch (e) { setErro(e.message) } finally { setSalvando(false) }
@@ -99,6 +131,8 @@ export default function TransferenciasPage() {
     janela.document.write('<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"/><title>Romaneio</title><style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;font-size:13px;color:#000;padding:30px}h1{font-size:20px;text-align:center;margin-bottom:4px}.subtitulo{text-align:center;font-size:12px;color:#555;margin-bottom:24px}.secao{border:1px solid #ccc;border-radius:6px;padding:14px;margin-bottom:16px}.secao-titulo{font-weight:bold;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#555;margin-bottom:10px;border-bottom:1px solid #eee;padding-bottom:6px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.campo{display:flex;flex-direction:column;gap:3px}.campo-label{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.05em}.campo-valor{font-size:14px;font-weight:600}.destaque{font-size:22px;font-weight:700}.assinaturas{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:8px}.assinatura{display:flex;flex-direction:column;align-items:center;gap:8px}.linha-assinatura{width:100%;border-bottom:1px solid #000;margin-top:40px}.assinatura-label{font-size:11px;color:#555}.rodape{text-align:center;font-size:10px;color:#aaa;margin-top:20px}@media print{body{padding:15px}button{display:none}}</style></head><body><h1>Romaneio de Transferencia</h1><p class="subtitulo">Documento de controle de movimentacao entre estoques</p><div class="secao"><div class="secao-titulo">Informacoes</div><div class="grid"><div class="campo"><span class="campo-label">Data</span><span class="campo-valor">' + new Date(t.solicitado_em).toLocaleString('pt-BR') + '</span></div><div class="campo"><span class="campo-label">Status</span><span class="campo-valor">' + STATUS_LABEL[t.status] + '</span></div><div class="campo"><span class="campo-label">Solicitante</span><span class="campo-valor">' + (t.solicitante?.nome || '-') + '</span></div>' + (t.admin ? '<div class="campo"><span class="campo-label">Aprovado por</span><span class="campo-valor">' + t.admin?.nome + '</span></div>' : '') + '</div></div><div class="secao"><div class="secao-titulo">Produto</div><div class="grid"><div class="campo"><span class="campo-label">Nome</span><span class="campo-valor destaque">' + t.produtos?.nome + '</span></div><div class="campo"><span class="campo-label">Quantidade saida</span><span class="campo-valor destaque">' + t.quantidade + ' ' + t.produtos?.unidade + '</span></div>' + (temConv ? '<div class="campo"><span class="campo-label">Quantidade entrada (convertida)</span><span class="campo-valor destaque">' + t.quantidade_destino + ' ' + t.unidade_destino + '</span></div>' : '') + (t.finalidade ? '<div class="campo"><span class="campo-label">Finalidade</span><span class="campo-valor">' + (t.finalidade === 'materia_prima' ? 'Materia-prima' : 'Revenda') + '</span></div>' : '') + '</div></div><div class="secao"><div class="secao-titulo">Origem e Destino</div><div class="grid"><div class="campo"><span class="campo-label">Estoque origem</span><span class="campo-valor">' + t.centro_origem?.estoques?.nome + '</span><span class="campo-label" style="margin-top:4px">Centro</span><span class="campo-valor">' + t.centro_origem?.nome + '</span></div><div class="campo"><span class="campo-label">Estoque destino</span><span class="campo-valor">' + t.centro_destino?.estoques?.nome + '</span><span class="campo-label" style="margin-top:4px">Centro</span><span class="campo-valor">' + t.centro_destino?.nome + '</span></div></div></div><div class="secao"><div class="secao-titulo">Assinaturas</div><div class="assinaturas"><div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Remetente</span></div><div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Motorista</span></div><div class="assinatura"><div class="linha-assinatura"></div><span class="assinatura-label">Destinatario</span></div></div></div><div class="rodape">Gerado em ' + new Date().toLocaleString('pt-BR') + '</div><script>window.onload=function(){window.print()}<\/script></body></html>')
     janela.document.close()
   }
+
+  const produtoNovoItem = getProduto(novoItem.produto_id)
 
   return (
     <AppLayout title="Transferencias">
@@ -190,79 +224,98 @@ export default function TransferenciasPage() {
 
       {modal && (
         <div className="overlay" onClick={e => e.target === e.currentTarget && setModal(false)}>
-          <div className="modal">
+          <div className="modal" style={{ maxWidth: 620 }}>
             <div className="modal-header"><h2>Solicitar Transferencia</h2><button className="btn btn-ghost btn-icon" onClick={() => setModal(false)}>x</button></div>
             <div className="modal-body">
-              <div className="field">
-                <label className="label">Produto</label>
-                <select className="select" value={form.produto_id} onChange={e => selecionarProduto(e.target.value)}>
-                  <option value="">Selecione...</option>
-                  {produtos.map(p => <option key={p.id} value={p.id}>{p.nome} ({p.unidade})</option>)}
-                </select>
-              </div>
 
-              {produtoSelecionado?.tipo === 'ambos' && (
+              {/* Origem e destino */}
+              <div className="grid-2">
                 <div className="field">
-                  <label className="label">Finalidade no destino *</label>
-                  <select className="select" value={form.finalidade} onChange={e => setForm(f => ({ ...f, finalidade: e.target.value }))}>
+                  <label className="label">Centro de origem *</label>
+                  <select className="select" value={centroOrigemId} onChange={e => setCentroOrigemId(e.target.value)}>
                     <option value="">Selecione...</option>
-                    <option value="revenda">Revenda (mantém unidade: {produtoSelecionado.unidade})</option>
-                    <option value="materia_prima">
-                      {'Materia-prima' + (produtoSelecionado.fator_conversao && produtoSelecionado.unidade_insumo
-                        ? ' (converte: 1 ' + produtoSelecionado.unidade + ' = ' + produtoSelecionado.fator_conversao + ' ' + produtoSelecionado.unidade_insumo + ')'
-                        : '')}
-                    </option>
+                    {centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
                   </select>
                 </div>
-              )}
-
-              <div className="field">
-                <label className="label">Centro de origem</label>
-                <select className="select" value={form.centro_origem_id} onChange={e => setForm(f => ({ ...f, centro_origem_id: e.target.value }))}>
-                  <option value="">Selecione...</option>
-                  {centros.map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label className="label">Centro de destino</label>
-                <select className="select" value={form.centro_destino_id} onChange={e => setForm(f => ({ ...f, centro_destino_id: e.target.value }))}>
-                  <option value="">Selecione...</option>
-                  {centros.filter(c => c.id !== form.centro_origem_id).map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label className="label">Quantidade (em {produtoSelecionado?.unidade || 'unidades'})</label>
-                <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={form.quantidade} onChange={e => setForm(f => ({ ...f, quantidade: e.target.value }))} />
+                <div className="field">
+                  <label className="label">Centro de destino *</label>
+                  <select className="select" value={centroDestinoId} onChange={e => setCentroDestinoId(e.target.value)}>
+                    <option value="">Selecione...</option>
+                    {centros.filter(c => c.id !== centroOrigemId).map(c => <option key={c.id} value={c.id}>{c.estoques?.nome} / {c.nome}</option>)}
+                  </select>
+                </div>
               </div>
 
-              {temConversao && form.quantidade && (
-                <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '.75rem' }}>
-                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--accent)', marginBottom: '.4rem' }}>Conversao aplicada</div>
-                  <div style={{ fontSize: '.85rem', display: 'flex', justifyContent: 'space-between' }}>
-                    <span className="text-muted">Sai da origem:</span>
-                    <strong>{form.quantidade} {produtoSelecionado.unidade}</strong>
+              {/* Lista de itens adicionados */}
+              {itens.length > 0 && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.5rem', textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                    Produtos ({itens.length})
                   </div>
-                  <div style={{ fontSize: '.85rem', display: 'flex', justifyContent: 'space-between', marginTop: '.25rem' }}>
-                    <span className="text-muted">Chega no destino:</span>
-                    <strong style={{ color: 'var(--accent)' }}>{qtdDestino} {unidadeDestino}</strong>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '.4rem' }}>
+                    {itens.map(item => (
+                      <div key={item.produto_id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg)', borderRadius: 8, padding: '.5rem .75rem', border: '1px solid var(--border)' }}>
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: '.88rem' }}>{item.produto?.nome}</div>
+                          <div style={{ fontSize: '.75rem', color: 'var(--text-3)' }}>
+                            {item.quantidade} {item.produto?.unidade}
+                            {item.finalidade === 'materia_prima' && item.produto?.fator_conversao && (
+                              <span style={{ color: 'var(--accent)', marginLeft: '.4rem' }}>→ {getPreviewConversao(item)}</span>
+                            )}
+                            {item.finalidade && <span style={{ marginLeft: '.5rem', color: 'var(--text-3)' }}>· {item.finalidade === 'materia_prima' ? 'Mat. Prima' : 'Revenda'}</span>}
+                          </div>
+                        </div>
+                        <button className="btn btn-danger btn-sm" onClick={() => removerItem(item.produto_id)}>Remover</button>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
+
+              {/* Adicionar produto */}
+              <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '1rem', border: '1px dashed var(--border)', marginBottom: '.75rem' }}>
+                <div style={{ fontSize: '.78rem', fontWeight: 700, color: 'var(--text-2)', marginBottom: '.75rem' }}>+ Adicionar produto</div>
+                <div className="field" style={{ margin: '0 0 .5rem' }}>
+                  <label className="label">Produto</label>
+                  <select className="select" value={novoItem.produto_id} onChange={e => setNovoItem(n => ({ ...n, produto_id: e.target.value, finalidade: '' }))}>
+                    <option value="">Selecione...</option>
+                    {produtos.filter(p => !itens.find(i => i.produto_id === p.id)).map(p => <option key={p.id} value={p.id}>{p.nome} ({p.unidade})</option>)}
+                  </select>
+                </div>
+                {produtoNovoItem?.tipo === 'ambos' && (
+                  <div className="field" style={{ margin: '0 0 .5rem' }}>
+                    <label className="label">Finalidade</label>
+                    <select className="select" value={novoItem.finalidade} onChange={e => setNovoItem(n => ({ ...n, finalidade: e.target.value }))}>
+                      <option value="">Selecione...</option>
+                      <option value="revenda">Revenda</option>
+                      <option value="materia_prima">
+                        {'Materia-prima' + (produtoNovoItem.fator_conversao && produtoNovoItem.unidade_insumo
+                          ? ' (1 ' + produtoNovoItem.unidade + ' = ' + produtoNovoItem.fator_conversao + ' ' + produtoNovoItem.unidade_insumo + ')'
+                          : '')}
+                      </option>
+                    </select>
+                  </div>
+                )}
+                <div style={{ display: 'flex', gap: '.5rem', alignItems: 'flex-end' }}>
+                  <div className="field" style={{ margin: 0, flex: 1 }}>
+                    <label className="label">Quantidade ({produtoNovoItem?.unidade || 'un'})</label>
+                    <input className="input" type="number" min="0.001" step="0.001" placeholder="0" value={novoItem.quantidade} onChange={e => setNovoItem(n => ({ ...n, quantidade: e.target.value }))} />
+                  </div>
+                  <button className="btn btn-primary" onClick={adicionarItem} style={{ marginBottom: 1 }}>Adicionar</button>
+                </div>
+              </div>
 
               <div className="field">
                 <label className="label">Observacao</label>
-                <textarea className="textarea" placeholder="Motivo..." value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} />
+                <textarea className="textarea" placeholder="Motivo..." value={observacao} onChange={e => setObservacao(e.target.value)} />
               </div>
+
               {erro && <div className="alert alert-red text-sm">{erro}</div>}
             </div>
             <div className="modal-footer">
               <button className="btn btn-secondary" onClick={() => setModal(false)}>Cancelar</button>
-              <button
-                className="btn btn-primary"
-                onClick={solicitar}
-                disabled={salvando || !form.produto_id || !form.centro_origem_id || !form.centro_destino_id || !form.quantidade || (produtoSelecionado?.tipo === 'ambos' && !form.finalidade)}
-              >
-                {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Solicitar'}
+              <button className="btn btn-primary" onClick={solicitar} disabled={salvando || !centroOrigemId || !centroDestinoId || itens.length === 0}>
+                {salvando ? <span className="spinner" style={{ borderTopColor: '#fff' }} /> : 'Solicitar ' + (itens.length > 0 ? '(' + itens.length + ' produto(s))' : '')}
               </button>
             </div>
           </div>
